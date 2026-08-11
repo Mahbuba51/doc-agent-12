@@ -127,3 +127,36 @@ def test_detection_survives_a_dark_uneven_scan_ground(tmp_path):
     img = cv2.GaussianBlur(img, (3, 3), 0)
 
     assert len(layout.detect([_page(tmp_path, img)], _cfg())) == 1
+
+
+def _exif_rotated_page(tmp_path, page_id="dolil_212"):
+    """A page stored sideways with EXIF orientation=6, i.e. 'rotate 90 CW to display'.
+
+    Two of the eight held-out scans are stored exactly like this. Viewers honour the tag,
+    so the page looks upright to a human; cv2.imread ignores it, so the pipeline would see
+    vertical text lines and find no blank rows at all.
+    """
+    upright = _blank(height=600, width=400)
+    for top in (40, 240, 440):
+        _add_block(upright, top)
+    sideways = np.rot90(upright)  # what is actually stored in the file
+    image = Image.fromarray(sideways)
+    exif = image.getexif()
+    exif[274] = 6
+    path = tmp_path / f"{page_id}.jpg"
+    image.save(path, format="JPEG", quality=95, exif=exif)
+    return Page(id=page_id, image_path=str(path), doc_id="deed_001")
+
+
+def test_exif_orientation_is_honoured_when_reading_a_page(tmp_path):
+    page = _exif_rotated_page(tmp_path)
+
+    assert len(layout.detect([page], _cfg())) == 3
+
+
+def test_exif_rotated_bboxes_are_in_display_coordinates(tmp_path):
+    page = _exif_rotated_page(tmp_path)
+
+    for region in layout.detect([page], _cfg()):
+        assert region.bbox[2] <= 400  # page is 400 wide once displayed upright
+        assert region.bbox[3] <= 600

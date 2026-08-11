@@ -1,5 +1,5 @@
 # Stage 0 — problem statement (one per group). Set by assignment.
-group_id: "TBD"   # team id not yet assigned by the supervisor — update once known
+group_id: "12"
 domain: "Land Registry Archives & Legal Aid"
 data_speciality: "bangla-english-codeswitch-handwritten"   # cursive Bangla HTR + inline English/Bangla-numeral code-switching
 primary_nfr: "precision-first"

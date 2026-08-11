@@ -7,7 +7,11 @@ enhance:   {enabled: false, model: "none", type: "none"}   # or "vae" / "none"
 # min_ink_frac: fraction of a row that must be ink for it to count as a text row.
 # line_gap_px: blank rows below this merge lines into one block; above it splits blocks.
 layout:    {model: "projection-heuristic", score_thr: 0.5, min_ink_frac: 0.01, line_gap_px: 18, min_height_px: 10, min_width_px: 30, pad_px: 4}
-ocr:       {model: "Qwen/Qwen2.5-VL-7B-Instruct", finetune: false}    # BASELINE = pretrained OCR
+# Stage 3 OCR/HTR — single-pass VLM per region (Step 0 decision D2).
+# sidecar/pages_dir/deed_groups: where page images and page->deed mapping come from, since a
+# Region carries only page_id. allow_page_as_doc: emergency standalone mode, leaks by design.
+# ascii_digits: map Bangla numerals to ASCII (A1 form commits to this for Exact Match).
+ocr:       {model: "Qwen/Qwen2.5-VL-7B-Instruct", finetune: false, sidecar: "data/interim/preprocessed/preprocess.jsonl", pages_dir: "data/raw", deed_groups: "data/deed_groups.csv", allow_page_as_doc: false, ascii_digits: true, max_new_tokens: 768}    # BASELINE = pretrained OCR
 embed:     {model: "BAAI/bge-m3", dim: 1024}
 index:     {type: "faiss:flat", chunk_tokens: 256, overlap: 32}
 retrieve:  {k: 10, k_step: 10, k_max: 40, weak_threshold: 0.35, rerank: true, reranker: "cross-encoder/ms-marco-MiniLM-L6-v2"}   # k_step/k_max/weak_threshold drive evidence-gated re-search
