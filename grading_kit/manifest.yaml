@@ -4,28 +4,23 @@
 # ONLY this file; it points to the rest. Build/run scripts and the eval
 # tasks are NAMED here, not copied, so they never go stale.
 
-project_id: ""              # your team id
+project_id: "TBD"   # team id not yet assigned by the supervisor — update once known
 
 axes:
-  domain: ""                # your corpus subject / real user (see Roster; one per team)
-  data_speciality: ""       # ONE hard property of your corpus you are handed (see Data-Speciality Catalog)
-                            #   e.g. bangla | arabic | code-switching | degraded-scans | multi-column |
-                            #        handwritten | old-orthography | math-notation | dirty-ocr | ...
-                            #   (English is not a speciality; if your corpus is English, pick a data condition.)
-  primary_nfr: ""           # ONE quality you optimise ABOVE baseline (see NFR sheet). Faithful &
-                            #   accurate are REQUIRED of everyone (baseline), so they are NOT choices.
-  nfr_target: ""            # the concrete target you commit to for that NFR, e.g. "p95 latency <= 300ms",
-                            #   "peak RAM <= 2GB", "ECE <= 0.05", "PII recall >= 0.98"
+  domain: "Land Registry Archives & Legal Aid"
+  data_speciality: "bangla-english-codeswitch-handwritten"   # cursive Bangla HTR + inline English/Bangla-numeral code-switching
+  primary_nfr: "precision-first"
+  nfr_target: "answer-F1 >= 0.92 and critical-field Exact Match >= 95% (plot no., deed amount, dates, party names)"
 
 corpus:
   path: data/raw/                   # where the scanned page-images live
-  pages: 0                          # total pages  (floor: >= 300)
-  words: 0                          # total words  (floor: >= 60000)
+  pages: 609                        # usable pages (653 raw - 44 flagged thumbnail/corrupt); computed in notebooks/eda.ipynb
+  words: 0                          # not countable yet — handwritten corpus, no text layer until A2's VLM/HTR reader runs (A1 estimate: ~95,000)
   provenance: data/provenance.md    # source + licence + counts
 
 heldout:
   pages_dir: grading_kit/heldout_pages/   # page-images set aside, never OCR-trained on
-  labels:    grading_kit/labels.jsonl     # ground-truth transcriptions for those pages
+  labels:    grading_kit/labels.jsonl     # ground-truth transcriptions for those pages (currently DRAFT/NEEDS-REVIEW — pending native Bangla-reader verification)
 
 entrypoints:                          # named, not duplicated (they build/run the real code)
   build_index: scripts/build_index.sh
