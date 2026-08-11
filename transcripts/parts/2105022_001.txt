@@ -1,0 +1,671 @@
+╭─── Claude Code v2.1.223 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Aishi!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Fixed feature flags be… │
+│   Sonnet 5 · Claude Pro · aishi2522@gmail.com's    │ Fixed every Bash comma… │
+│   Organization                                     │ Fixed `/tui` bringing … │
+│            D:\cse\4-1\429\doc-agent-12             │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ read the repo and tell me what to do?                                         
+
+  Searched for 1 pattern, read 3 files, listed 1 directory (ctrl+o to expand)
+
+● This is a university course project skeleton (CSE 429, "doc-agent") — a
+  scanned-document Agentic-RAG system built in fixed stages. Right now the repo
+  is just the unmodified starter template (one "initial commit", every
+  src/doc_agent/* function still has its # IMPLEMENT stub — 37 files, no code
+  written; data/raw/ is empty; configs/task.yaml and grading_kit/manifest.yaml
+  still have placeholder/blank values).
+
+  Key facts from the docs:
+  - Structure is CI-locked (STRUCTURE.md): you may only edit config YAML,
+  function bodies marked # IMPLEMENT, and grading_kit/. Never rename files,
+  change signatures, or touch contracts.py/tool names/pipeline stage order.
+  - Note (2026 cohort, per SUBMISSION.md): A1 was already submitted on Moodle,
+  so your first git tag is a2-submit — and that push must also carry the A1
+  deliverables that didn't exist as files back then: configs/task.yaml,
+  data/provenance.md + corpus, notebooks/eda.ipynb, grading_kit/manifest.yaml,
+  grading_kit/heldout_pages/ + labels.jsonl.
+  - configs/task.yaml currently has placeholder-looking values (group_id: "G00",
+  domain almanacs/panjika, primary_nfr: reproducible but nfr_target says p95 
+  latency <= 300ms — those two don't match, worth checking if this is a real
+  choice or leftover template text).
+
+  What's actually left to do, in order:
+
+  1. Finish A1 artifacts (now graded at A2): fix configs/task.yaml (real team
+  id, domain, data speciality, NFR + matching target, corpus source/license),
+  get a real scanned corpus into data/raw/ (≥300 pages, ≥60k words) via
+  scripts/get_data.sh, fill data/provenance.md, grading_kit/manifest.yaml,
+  transcribe a few pages into grading_kit/heldout_pages/ + labels.jsonl, write
+  notebooks/eda.ipynb.
+  2. A2 core build, in this order: ingest/loader.py → ingest/preprocess.py →
+  vision/layout.py → vision/ocr.py → index/chunk.py → index/embed.py →
+  index/store.py, then scripts/build_index.sh, notebooks/kb_demo.ipynb,
+  reports/pipeline_diagram.md, configs/design_choices.md.
+  3. Your gated add-ons for A2, based on data_speciality: degraded-scans → extra
+  work in ingest/preprocess.py (+ optionally ingest/enhance.py for
+  VAE/diffusion repair).
+  4. A3 (agent + retrieval + eval) and A4 (serving + governance) come after, per
+  handbook/05-Codebase-Guide.md.
+
+  Given the scale, I'd rather not start writing code across 30+ stub files
+  blindly.
+
+● User answered Claude's questions:
+  ⎿  · Where do you want to start? → i have the dataset and A1 form we filled up
+     for A1 previously what should we do now?
+
+● User answered Claude's questions:
+  ⎿  · Where are your A1 form and dataset located so I can pull the real details
+     (domain, data speciality, NFR, corpus source) into the repo files? → Both 
+     are on my machine, let me give paths
+
+● Go ahead and share the paths to the A1 form and the dataset folder, and I'll
+  pull the details in.
+
+✻ Cooked for 1m 2s
+
+❯ C:\Users\Asus\Downloads\Bangla Handwritten Dolil Dataset (653 Images)\Bangla  
+  Handwritten Dolil Dataset (653 Images)\Dolil Dataset and                      
+  "C:\Users\Asus\Downloads\A1_form.docx"                                        
+
+  Searched for 1 pattern, read 1 file, listed 1 directory, ran 7 shell commands (ctrl+o to expand)
+
+● Entered plan mode
+  Claude is now exploring and designing an implementation approach.
+
+  Read 4 files (ctrl+o to expand)
+  ⎿  Invalid tool parameters
+
+● User answered Claude's questions:
+  ⎿  · The A1 form references an eda.ipynb, get_data.sh, provenance.md, 
+     manifest.yaml, and heldout_pages/labels.jsonl that were already built for 
+     the Moodle A1 submission (the form says these were handed in as a ZIP 
+     alongside it). Do you still have that original A1 submission ZIP/folder 
+     anywhere? → No, only the docx form and the raw dataset survived
+     · What's your team/project id (used in grading_kit/manifest.yaml project_id
+     and the GitHub repo name doc-agent-<team-id>)? → they were not provided 
+     earlier by our supervisor he provided code this time which is in the repo
+● Fetch(https://data.mendeley.com/datasets/yk3c3xy9vm/1)
+  ⎿  Received 119.9KB (200 OK)
+
+● User answered Claude's questions:
+  ⎿  · For grading_kit/labels.jsonl (ground-truth transcriptions of a few 
+     held-out Dolil pages), how should the actual Bangla transcription text get 
+     filled in? → I'll draft a first-pass reading of each image, clearly marked 
+     NEEDS-REVIEW, for a Bangla-reading teammate to correct (Recommended)
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● Confirmed — the form's numbers check out exactly against the real files (653
+  total, 44 under 200KB matching dolil_313–324 and dolil_431–…). Now I have
+  everything needed to write the plan.
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: C:\Users\Asus\.claude\plans\iridescent-kindling-island.md · 
+     /plan to edit
+     Carry A1 into the repo (feeds the a2-submit tag)
+
+     Context
+
+     This repo (doc-agent) is the unmodified starter skeleton for a
+     semester-long course project (CSE 429). The team already did A1's thinking
+     — a filled A1_form.docx (Land Registry Archives & Legal Aid domain,
+     Bangla-English handwriting/code-switching speciality, Precision-First NFR
+     with F1≥0.92/EM≥95%) and downloaded the real corpus (Bangla Handwritten 
+     Dolil Dataset, 653 JPEGs, 2.2GB, CC BY 4.0, DOI 10.17632/yk3c3xy9vm.1) —
+     but the original A1 submission ZIP (notebook, scripts, provenance,
+     manifest, heldout labels) wasn't saved anywhere; only the docx and the raw
+     images survived.
+
+     Per SUBMISSION.md, this cohort's first git tag is a2-submit, and that push
+     must carry the A1 artifacts since they didn't exist as repo files when A1
+     was graded on Moodle. So the work now is: reconstruct those A1 artifacts as
+     real repo files/data, sourced from the form's content (verified against
+     the actual dataset — file counts already spot-checked and match the form
+     exactly: 653 files, 44 under 200KB = the claimed thumbnail/corrupt set).
+     This does not yet touch src/doc_agent/ pipeline code (loader.py,
+     preprocess.py, etc.) — that's the next, separate A2-core phase, offered at
+     the end but not started here.
+
+     What gets built
+
+     1. configs/task.yaml — replace placeholders with the real three choices
+     from the form: domain (Land Registry Archives & Legal Aid), data_speciality
+     (bangla-english-codeswitch-handwritten), primary_nfr (precision-first) +
+     matching nfr_target (F1 >= 0.92, Exact Match >= 95% — fixes the current
+     mismatch where nfr says "reproducible" but target says "p95 latency"),
+     corpus block (min_pages/min_words unchanged, source_url = the Mendeley DOI
+     link, license = CC BY 4.0). group_id stays a placeholder (TBD) — team id
+     hasn't been assigned yet per the user.
+
+     2. data/provenance.md — source URL + DOI, CC BY 4.0 + re-share note,
+     page/word/size counts (653 raw / 609 usable / ~2.2GB; words marked "pending
+     A2 OCR, estimated ~95k"), the three-fold difficulty writeup (script,
+     code-switching, physical degradation) condensed from the form, and the
+     deed-level 70/15/15 split policy + the leakage check description.
+
+     3. grading_kit/manifest.yaml — fill project_id: TBD, the three axes,
+     corpus.pages/words (from the notebook's actual computed numbers, see #5),
+     pointers already correct (entrypoints section is generic and needs no
+     edits).
+
+     4. configs/design_choices.md — fill only the "0 Frame" and "1 
+     Ingest+Enhance" rows (the two stages A1 touches) across all 8 facets,
+     condensed from Section 5 of the form (problem statement, data, model
+     choices — Pillow/OpenCV classical enhancement chosen over VAE/diffusion to
+     avoid reshaping legally-significant strokes, methods — skew
+     range/denoise/Sauvola params, design, development, deployment, MLOps).
+     Later rows stay blank for A2/A3 authors.
+
+     5. Stage the corpus + scripts/get_data.sh
+     - Copy the 653 JPEGs from C:\Users\Asus\Downloads\Bangla Handwritten Dolil 
+     Dataset (653 Images)\...\Dolil Dataset into data/raw/ (already gitignored —
+     confirmed in .gitignore, so this is safe, no repo bloat).
+     - Mendeley doesn't expose a stable scriptable download URL (checked via
+     WebFetch — download is a JS-driven "Download All" button, no direct link).
+     So scripts/get_data.sh will: print the manual steps (open the DOI page,
+     click Download All, unzip), and support a SRC_DIR env var to copy from an
+     already-downloaded local folder into data/raw/ (so it's still a working
+     one-command reproduction path for a teammate who has the zip locally), with
+     a checksum/count sanity check (expect 653 files) at the end.
+
+     6. notebooks/eda.ipynb — replace the empty stub with real, executed cells:
+     - inventory data/raw/, flag/report files <200KB as thumbnail/corrupt
+     (validated: exactly 44, matching dolil_313–324 + dolil_431–…) → 609 usable
+     pages
+     - file-size distribution, basic image dimension check via Pillow
+     - a legibility/scan-quality proxy (Laplacian-variance-style contrast
+     metric, normalized 0–1) → histogram + count in the low-legibility band
+     (form claims ~30%/184 pages — the notebook will compute the real number,
+     not just assert the form's estimate)
+     - a pHash near-duplicate scan across all usable pages (leakage check #2
+     from the form)
+     - the three worked examples already in the form (dolil_13, dolil_20,
+     dolil_11) with my notes on what's visible
+     - explicit note that word counts and deed-serial grouping are finalized in
+     A2 (needs the VLM reading stage), matching the form's own caveat
+     - I'll validate the logic actually runs against the real 653-file corpus
+     before finalizing (lightweight libs only — Pillow/numpy/pandas/imagehash —
+     installed in a throwaway way to test, not a full make setup/torch install,
+     since that's a heavy multi-GB pull not needed for EDA). If cell output
+     numbers differ from the form's estimates, the notebook reports the real
+     numbers and I'll flag the delta to you rather than silently forcing a
+     match.
+
+     7. grading_kit/heldout_pages/ + labels.jsonl — select ~8 pages spanning the
+     quality bands (including the 3 the form already describes,
+     dolil_13/dolil_20/dolil_11, plus a few more for spread across ink
+     colors/eras/legibility), copy those images in. For each, I'll read the
+     image and write a draft transcription into labels.jsonl, but since this is
+     historical cursive Bangla legal handwriting — genuinely hard to get right,
+     and it's the OCR scoring oracle for a precision-first project — every entry
+     gets an explicit "status": "NEEDS-REVIEW" field and the raw text prefixed
+     so nobody mistakes my draft for verified ground truth. A Bangla-reading
+     teammate needs to correct these before A2/A3 grading treats them as gold.
+
+     What I will explicitly flag as still-open (not done in this pass)
+
+     - group_id/project_id is a placeholder (TBD) — team id not yet assigned by
+     the supervisor.
+     - Heldout transcriptions are drafts pending human correction.
+     - Actual pipeline code (src/doc_agent/ingest/*, vision/*, index/*) is
+     untouched — that's the A2-core build, a separate next phase.
+     - make setup (full uv sync, pulls torch/lightning/transformers etc.) hasn't
+     been run — needed before any real pipeline work starts, but not needed for
+     this EDA pass.
+     - GitHub repo creation + git tag a2-submit push is a manual step for the
+     team once ready (per SUBMISSION.md), not something I'll do unprompted.
+
+     Verification
+
+     - Re-run the EDA notebook top-to-bottom (jupyter nbconvert --execute or
+     equivalent) and confirm it completes without error and its computed counts
+     are shown, not asserted.
+     - Diff configs/task.yaml, grading_kit/manifest.yaml, data/provenance.md
+     against the A1 form to confirm nothing contradicts what was already graded.
+     - Confirm git status shows data/raw/ untracked-but-ignored (not
+     accidentally staged) while grading_kit/heldout_pages/ files are tracked.
+
+● Auto mode lets Claude handle permission prompts automatically — Claude
+  checks each tool call for risky actions and prompt injection before 
+  executing. Actions Claude identifies as safe are executed, while 
+  actions Claude identifies as risky are blocked and Claude may try a 
+  different approach. Ideal for long-running tasks. Sessions are 
+  slightly more expensive. Claude can make mistakes that allow harmful 
+  commands to run, it's recommended to only use in isolated 
+  environments. Shift+Tab to change mode.
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(configs\task.yaml)
+  ⎿  Added 10 lines, removed 6 lines
+       1  # Stage 0 — problem statement (one per group). Set by assignmen
+          t.
+       2 -group_id: "G00"                                                
+       3 -domain: "almanacs/panjika"                                     
+       4 -data_speciality: "degraded-scans"   # ONE hard corpus property 
+         -(English is not one)                                           
+       5 -primary_nfr: "reproducible"                                    
+       6 -nfr_target: "p95 latency <= 300ms"   # your concrete committed 
+         -target                                                         
+       7 -corpus: {min_pages: 300, min_words: 60000, source_url: "", lice
+         -nse: ""}                                                       
+       2 +group_id: "TBD"   # team id not yet assigned by the supervisor 
+         +— update once known                                            
+       3 +domain: "Land Registry Archives & Legal Aid"                   
+       4 +data_speciality: "bangla-english-codeswitch-handwritten"   # cu
+         +rsive Bangla HTR + inline English/Bangla-numeral code-switching
+       5 +primary_nfr: "precision-first"                                 
+       6 +nfr_target: "answer-F1 >= 0.92 and critical-field Exact Match >
+         += 95% (plot no., deed amount, dates, party names)"             
+       7 +corpus:                                                        
+       8 +  min_pages: 300                                               
+       9 +  min_words: 60000                                             
+      10 +  source_url: "https://data.mendeley.com/datasets/yk3c3xy9vm/1"
+         +   # Bangla Handwritten Dolil Dataset (653 Images), DOI 10.1763
+         +2/yk3c3xy9vm.1                                                 
+      11 +  license: "CC BY 4.0 (re-share permitted with attribution)"   
+● Write(data\provenance.md)
+  ⎿  Error writing file
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(data\provenance.md)
+  ⎿  Added 48 lines, removed 6 lines
+       1 -# Corpus provenance (A1 — fill this)                           
+       2 -- Source (URL):                                                
+       3 -- Licence / usage rights:                                      
+       4 -- Pages: __   Words: __   Size on disk: __                     
+       5 -- Scan/script difficulty notes:                                
+       6 -- Split policy (by document):                                  
+       1 +# Corpus provenance (A1 — carried into A2)                     
+       2 +                                                               
+       3 +- **Source (URL):** Bangla Handwritten Dolil Dataset (653 Image
+         +s) — Mendeley Data.                                            
+       4 +  https://data.mendeley.com/datasets/yk3c3xy9vm/1 (DOI: `10.176
+         +32/yk3c3xy9vm.1`)                                              
+       5 +  Citation: Anik, Saifullah; Hossain, Md. Obydul; Arifen, Radoa
+         +nul; Ahammed, Md. Shakib (2025),                               
+       6 +  "Bangla Handwritten Dolil Dataset (653 Images)", Mendeley Dat
+         +a, V1.                                                         
+       7 +- **Licence / usage rights:** CC BY 4.0 — copying, redistributi
+         +on, modification, and commercial                               
+       8 +  reuse permitted with attribution to the dataset creators abov
+         +e. We may re-share the corpus.                                 
+       9 +- **Pages:** 653 scanned JPEGs on disk. 44 are non-content thum
+         +bnail/corrupt files (<0.2MB —                                  
+      10 +  `dolil_313`–`dolil_324`, `dolil_431`–`dolil_462`), leaving **
+         +609 usable pages**. (Exact counts                              
+      11 +  and the legibility breakdown are computed in `notebooks/eda.i
+         +pynb`.)                                                        
+      12 +- **Words:** not yet counted — extraction requires the Stage 3 
+         +OCR/HTR reader (the corpus is                                  
+      13 +  handwritten, so no text layer exists to count directly). A1 e
+         +stimate: ~95,000 words, to be                                  
+      14 +  finalized once A2's VLM/HTR reading stage runs.              
+      15 +- **Size on disk:** 2.2 GB across all 653 JPEGs.               
+      16 +- **Meets the profile:** ≥300 usable pages AND ≥60,000 words (p
+         +ending final word count from A2).                              
+      17 +                                                               
+      18 +## Scan/script difficulty notes                                
+      19 +Three difficulties stack on every page:                        
+      20 +1. **Script** — cursive handwritten Bangla with dense conjuncts
+         + (যুক্তাক্ষর) and stacked matras                                   
+      21 +   that touch/overlap, plus older legal orthography.           
+      22 +2. **Code-switching** — English and Bangla-digit numerals appea
+         +r inline for the fields that                                   
+      23 +   matter most (deed no., khatian/dag numbers, dates, money), a
+         +nd English legal boilerplate is                                
+      24 +   handwritten in the margin (e.g. "Admissible under Rule 2(1);
+         + under Section 26(J)-33(L) of the                              
+      25 +   Bengal Tenancy Act 1933..." on `dolil_100`).                
+      26 +3. **Physical degradation** — faint/uneven ballpoint ink, skew 
+         +from flatbed capture, show-through                             
+      27 +   from the reverse side, and government seals/round stamps ove
+         +rprinted on the text.                                          
+      28 +                                                               
+      29 +Standard Bangla OCR (Tesseract) fails on all three, which is wh
+         +y the reading stage (Stage 3) uses                             
+      30 +a VLM-based reader (Qwen2.5-VL + GraDeT-HTR) instead of a conve
+         +ntional OCR engine.                                            
+      31 +                                                               
+      32 +## Split policy (by document)                                  
+      33 +**70% train / 15% validation / 15% test, split by DEED, never b
+         +y page.** A deed spans a variable                              
+      34 +number of consecutive sheets sharing an incrementing registry s
+         +erial number (e.g. `dolil_13/14/15`                            
+      35 +carry serials `2162843/2162844/2162845`), and every sheet also 
+         +prints an `x/N` "page-in-deed"                                 
+      36 +marker top-left. Sheets are grouped into deeds by clustering co
+         +nsecutive serials and confirming                               
+      37 +each boundary with the `x/N` marker; whole deed-groups are then
+         + assigned to splits by hashing the                             
+      38 +deed key (deterministic, reproducible). Serial numbers are only
+         + read reliably once the A2 VLM                                 
+      39 +stage runs, so at this stage the grouping is seeded from a hand
+         +-labelled sample of deed                                       
+      40 +boundaries and finalized once A2's reader is in place.         
+      41 +                                                               
+      42 +**Leak check:** the most likely leak is a multi-sheet deed (sam
+         +e header boilerplate, parties,                                 
+      43 +mouza, serial run) scattered across train/test, letting the mod
+         +el "recognise" a test sheet from a                             
+      44 +near-twin seen in training. Prevented by clustering on the regi
+         +stry serial number *before*                                    
+      45 +splitting, so a whole serial-run stays in one split. Verified t
+         +wo ways (both in `eda.ipynb`):                                 
+      46 +(a) assert no deed group appears in more than one split, (b) a 
+         +perceptual-hash (pHash)                                        
+      47 +near-duplicate scan across splits to catch re-scans/consecutive
+         + sheets. Residual risk: any deed                               
+      48 +mis-grouped before A2 reads the real serials is re-checked and 
+         +corrected once that stage runs.                                
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(configs\design_choices.md)
+  ⎿  Added 2 lines, removed 2 lines
+      1  # Per-stage design choices (A2 deliverable). Fill every cell.
+      2  | Stage | Problem statement | Data | Model | Methods | Design | 
+         Development | Deployment | MLOps |
+      3  |---|---|---|---|---|---|---|---|---|
+      4 -| 0 Frame |  |  |  |  |  |  |  |  |                             
+      5 -| 1 Ingest+Enhance |  |  |  |  |  |  |  |  |                    
+      4 +| 0 Frame | Precision-first document-understanding agent for Lan
+        +d Registry Archives & Legal Aid: answer questions from scanned h
+        +istorical Dolils (Bangla-English handwritten deeds) with page ci
+        +tations. Headline target: Exact Match ≥95% on verifiable legal f
+        +ields, F1 ≥0.92 overall. | Bangla Handwritten Dolil Dataset (Men
+        +deley, CC BY 4.0, DOI 10.17632/yk3c3xy9vm.1): 653 scanned JPEGs 
+        +/ 609 usable pages after dropping ~44 thumbnail/corrupt files, ~
+        +95k words (est., finalized in A2), 2.2GB. Split 70/15/15 by deed
+        + (registry-serial grouping), never by page. | No model at this s
+        +tage — framing only. Downstream: DocLayout-YOLO (layout), Qwen2.
+        +5-VL + GraDeT-HTR (reading), BGE-M3 (embed), Qwen3-4B-AWQ (agent
+        + controller). | Desk officers currently cross-reference paper Do
+        +lils manually — slow and error-prone with real legal consequence
+        +s; the tool's source of truth is the scanned page itself, so gro
+        +unded citation (not web search / general chat) is the right fit.
+        + | Agent must abstain rather than guess when evidence is weak; c
+        +overage is traded for trustworthiness given the precision-first 
+        +NFR. | Justified against our own corpus (Section 1-4 of A1 form)
+        +: domain, speciality, and NFR each point to specific pages/field
+        +s, not generic claims. | Offline batch ingest, online agent serv
+        +ing later (A4). Azure GPU VM (Standard_NC4as_T4_v3) planned for 
+        +the served stack. | Track corpus version, split seed, and config
+        + snapshot via MLflow (Stage 8+); reproducible-by-corpus is the g
+        +rading bar. |                                                   
+      5 +| 1 Ingest+Enhance | Load and clean 609 usable scanned Dolil pag
+        +es so downstream layout/reading stages get a legible, unmodified
+        +-evidence image. | Same corpus; input is raw JPEGs in `data/raw/
+        +`, output is deskewed/denoised/binarized variants plus the untou
+        +ched original+greyscale (kept as fallback since binarization can
+        + drop faint seals/matras). | Classical pipeline only: Pillow + O
+        +penCV. No VAE/diffusion generative repair — rejected because a g
+        +enerative model could reconstruct, reshape, or remove a handwrit
+        +ten stroke and change a legally significant plot number, name, d
+        +ate, or amount. | Validate & drop files <0.2MB as non-content; c
+        +onvert to greyscale; estimate skew via Hough/projection-profile 
+        +search in [-4°,+4°] and rotate (fill=255); light 3x3 median deno
+        +ise + non-local-means for show-through; Sauvola adaptive thresho
+        +ld (window 15, k=0.2, R=128) for a binary copy; scan-quality pro
+        +xy = normalized high-pass blur variance (radius 3, /40.0), flag 
+        +<0.35 as low-legibility; Unicode NFC text normalization + Bangla
+        +↔ASCII digit mapping downstream. | Deterministic, rule-based Sta
+        +ge 1 (no training loss) feeding Stage 2 layout detection; conser
+        +vative parameters chosen to preserve thin strokes over aggressiv
+        +e cleanup. | Verified in `notebooks/eda.ipynb`: file counts, leg
+        +ibility-band histogram, pHash near-duplicate leakage check, befo
+        +re/after examples on representative pages (`dolil_13`, `dolil_20
+        +`, `dolil_11`). | Runs offline as a one-time batch job (`scripts
+        +/build_index.sh` upstream step) before the agent is served, avoi
+        +ding repeated expensive image ops per query. | Preprocessing con
+        +fig (skew range, denoise, Sauvola params, quality threshold) is 
+        +versioned alongside the corpus snapshot so a preprocessing chang
+        +e is traceable to its effect on downstream Exact Match. |       
+      6  | 2 Layout |  |  |  |  |  |  |  |  |
+      7  | 3 OCR |  |  |  |  |  |  |  |  |
+      8  | 4 Index |  |  |  |  |  |  |  |  |
+
+  Listed 1 directory (ctrl+o to expand)
+
+● Good, data/raw/ doesn't exist yet. Copying the 653 scanned pages in now.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● All 653 pages copied into data/raw/ (confirmed gitignored, so this stays
+  local). Now writing scripts/get_data.sh.
+
+  Read 1 file (ctrl+o to expand)
+
+● Write(scripts\get_data.sh)
+  ⎿  Added 45 lines, removed 3 lines
+       1  #!/usr/bin/env bash
+       2 -# A1 — fetch or recreate your scanned corpus into data/raw/    
+       3 -# IMPLEMENT: download/prepare your corpus (public-domain / open
+         -ly licensed).                                                  
+       2 +# A1 — fetch or recreate the corpus into data/raw/             
+       3 +#                                                              
+       4 +# Corpus: Bangla Handwritten Dolil Dataset (653 Images), Mendel
+         +ey Data,                                                       
+       5 +#         DOI 10.17632/yk3c3xy9vm.1, CC BY 4.0.                
+       6 +# https://data.mendeley.com/datasets/yk3c3xy9vm/1              
+       7 +#                                                              
+       8 +# Mendeley serves downloads via a JS "Download All" button with
+         + no stable,                                                    
+       9 +# scriptable file URL, so this cannot be a plain curl one-liner
+         +. Instead:                                                     
+      10 +#   1. If SRC_DIR points at an already-downloaded local copy, c
+         +opy it in.                                                     
+      11 +#   2. Otherwise, print the manual steps and exit non-zero.    
+      12  set -euo pipefail
+       5 -echo "TODO: fetch corpus into data/raw/"                       
+      13 +                                                               
+      14 +RAW_DIR="data/raw"                                             
+      15 +EXPECTED_COUNT=653                                             
+      16 +                                                               
+      17 +mkdir -p "$RAW_DIR"                                            
+      18 +                                                               
+      19 +if [ -n "${SRC_DIR:-}" ]; then                                 
+      20 +  if [ ! -d "$SRC_DIR" ]; then                                 
+      21 +    echo "SRC_DIR '$SRC_DIR' does not exist." >&2              
+      22 +    exit 1                                                     
+      23 +  fi                                                           
+      24 +  echo "Copying corpus from $SRC_DIR into $RAW_DIR ..."        
+      25 +  cp -n "$SRC_DIR"/*.jpg "$RAW_DIR"/                           
+      26 +else                                                           
+      27 +  count=$(find "$RAW_DIR" -maxdepth 1 -iname '*.jpg' | wc -l | 
+         +tr -d ' ')                                                     
+      28 +  if [ "$count" -ge "$EXPECTED_COUNT" ]; then                  
+      29 +    echo "$RAW_DIR already has $count/$EXPECTED_COUNT images — 
+         +nothing to do."                                                
+      30 +    exit 0                                                     
+      31 +  fi                                                           
+      32 +  cat >&2 <<EOF                                                
+      33 +No corpus found in $RAW_DIR (have $count/$EXPECTED_COUNT images
+         +) and SRC_DIR not set.                                         
+      34 +                                                               
+      35 +Manual download (Mendeley has no stable direct-download URL):  
+      36 +  1. Open https://data.mendeley.com/datasets/yk3c3xy9vm/1      
+      37 +  2. Click "Download All" and unzip it somewhere, e.g. ~/Downlo
+         +ads/dolil/                                                     
+      38 +  3. Re-run: SRC_DIR=~/Downloads/dolil/"Dolil Dataset" scripts/
+         +get_data.sh                                                    
+      39 +EOF                                                            
+      40 +  exit 1                                                       
+      41 +fi                                                             
+      42 +                                                               
+      43 +count=$(find "$RAW_DIR" -maxdepth 1 -iname '*.jpg' | wc -l | tr
+         + -d ' ')                                                       
+      44 +echo "$RAW_DIR now has $count images (expected $EXPECTED_COUNT)
+         +."                                                             
+      45 +if [ "$count" -ne "$EXPECTED_COUNT" ]; then                    
+      46 +  echo "WARNING: count mismatch — verify the source folder is c
+         +omplete." >&2                                                  
+      47 +fi                                                             
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Works. Now on to the EDA notebook — need lightweight Python libs to actually
+  validate the analysis against the real corpus.
+
+  Ran 4 shell commands (ctrl+o to expand)
+● All libs installed cleanly with the real Windows Python. Let's build and
+  validate the EDA logic against the real corpus.
+
+  Made 1 scratchpad edit +289, read 3 files, ran 10 shell commands (ctrl+o to expand)
+
+● Now let's actually execute it end-to-end to confirm it runs clean and produces
+  real outputs.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+● It's importable, just not wired up as a CLI entry point. Let's invoke it
+  directly as a module.
+
+  Ran 7 shell commands (ctrl+o to expand)
+
+● Confirmed — images embedded as image/jpeg, notebook is fully executed and
+  valid. Now moving to the held-out pages and labels.
+
+  Read 5 files, ran 2 shell commands (ctrl+o to expand)
+
+● Now writing labels.jsonl with honest, partial draft transcriptions.
+
+  Read 1 file, ran 2 shell commands (ctrl+o to expand)
+
+● Now let's finish grading_kit/manifest.yaml with the real, computed corpus
+  numbers.
+  Read 1 file (ctrl+o to expand)
+
+● Write(grading_kit\manifest.yaml)
+  ⎿  Added 8 lines, removed 13 lines
+       4  # ONLY this file; it points to the rest. Build/run scripts and 
+          the eval
+       5  # tasks are NAMED here, not copied, so they never go stale.
+       6  
+       7 -project_id: ""              # your team id                     
+       7 +project_id: "TBD"   # team id not yet assigned by the superviso
+         +r — update once known                                          
+       8  
+       9  axes:
+      10 -  domain: ""                # your corpus subject / real user (
+         -see Roster; one per team)                                      
+      11 -  data_speciality: ""       # ONE hard property of your corpus 
+         -you are handed (see Data-Speciality Catalog)                   
+      12 -                            #   e.g. bangla | arabic | code-swi
+         -tching | degraded-scans | multi-column |                       
+      13 -                            #        handwritten | old-orthogra
+         -phy | math-notation | dirty-ocr | ...                          
+      14 -                            #   (English is not a speciality; i
+         -f your corpus is English, pick a data condition.)              
+      15 -  primary_nfr: ""           # ONE quality you optimise ABOVE ba
+         -seline (see NFR sheet). Faithful &                             
+      16 -                            #   accurate are REQUIRED of everyo
+         -ne (baseline), so they are NOT choices.                        
+      17 -  nfr_target: ""            # the concrete target you commit to
+         - for that NFR, e.g. "p95 latency <= 300ms",                    
+      18 -                            #   "peak RAM <= 2GB", "ECE <= 0.05
+         -", "PII recall >= 0.98"                                        
+      10 +  domain: "Land Registry Archives & Legal Aid"                 
+      11 +  data_speciality: "bangla-english-codeswitch-handwritten"   # 
+         +cursive Bangla HTR + inline English/Bangla-numeral code-switchi
+         +ng                                                             
+      12 +  primary_nfr: "precision-first"                               
+      13 +  nfr_target: "answer-F1 >= 0.92 and critical-field Exact Match
+         + >= 95% (plot no., deed amount, dates, party names)"           
+      14  
+      15  corpus:
+      16    path: data/raw/                   # where the scanned page-im
+          ages live
+      22 -  pages: 0                          # total pages  (floor: >= 3
+         -00)                                                            
+      23 -  words: 0                          # total words  (floor: >= 6
+         -0000)                                                          
+      17 +  pages: 609                        # usable pages (653 raw - 4
+         +4 flagged thumbnail/corrupt); computed in notebooks/eda.ipynb  
+      18 +  words: 0                          # not countable yet — handw
+         +ritten corpus, no text layer until A2's VLM/HTR reader runs (A1
+         + estimate: ~95,000)                                            
+      19    provenance: data/provenance.md    # source + licence + counts
+      20  
+      21  heldout:
+      22    pages_dir: grading_kit/heldout_pages/   # page-images set asi
+          de, never OCR-trained on
+      28 -  labels:    grading_kit/labels.jsonl     # ground-truth transc
+         -riptions for those pages                                       
+      23 +  labels:    grading_kit/labels.jsonl     # ground-truth transc
+         +riptions for those pages (currently DRAFT/NEEDS-REVIEW — pendin
+         +g native Bangla-reader verification)                           
+      24  
+      25  entrypoints:                          # named, not duplicated (
+          they build/run the real code)
+      26    build_index: scripts/build_index.sh
+
+● All core files are done. Now for final verification.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Exactly as expected — data/raw/ (2.2GB) is properly gitignored, while the 8
+  heldout pages and all the config/doc edits show up as trackable changes. Let's
+  do a final sanity pass: re-diff the filled files against the A1 form and
+  confirm consistency.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+● Everything checks out consistently. Let's clean up the scratch files and
+  update the task list.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● All rows have consistent field counts (11) — the table structure is intact.
+  Everything for this pass is complete. Summary of what's done and what's still
+  open:
+
+  Done:
+  - configs/task.yaml, data/provenance.md, grading_kit/manifest.yaml — filled
+  with the real domain/speciality/NFR/corpus facts from your A1 form,
+  cross-checked against the actual dataset
+  - configs/design_choices.md — Stage 0 & Stage 1 rows filled (8 facets each)
+  - data/raw/ — all 653 pages staged locally (gitignored, confirmed not
+  tracked); scripts/get_data.sh documents the Mendeley manual-download path + a
+  SRC_DIR local-copy fallback
+  - notebooks/eda.ipynb — fully executed, real analysis: inventory (653→609
+  usable, exact match to your form), a validated legibility proxy (19.5%
+  low-legibility, vs. the form's ~30% eyeball estimate — flagged as a real
+  discrepancy, not forced to match), a pHash near-duplicate scan that found 90
+  pairs and — importantly — 52 of them currently straddle train/val/test under 
+  the placeholder split, a concrete, actionable finding for A2's real
+  deed-grouping work
+  - grading_kit/heldout_pages/ + labels.jsonl — 8 pages spanning the legibility
+  range, each with a partial draft transcription explicitly marked NEEDS-REVIEW
+  (I deliberately didn't fabricate full transcriptions of the cursive body text
+  — that's a job for a Bangla-reading teammate, not something I should guess at
+  given this is precision-critical ground truth)
+
+  Still open (flagged, not done here):
+  - group_id/project_id is "TBD" — needs the real team id once your supervisor
+  assigns it
+  - Heldout transcriptions need a teammate's review/correction
+  - Actual A2 pipeline code (src/doc_agent/ingest/*, vision/*, index/*) —
+  untouched, that's the next phase
+  - make setup hasn't been run (heavy torch/lightning install, only needed once
+  you start pipeline code)
+  - Creating the GitHub repo and pushing a2-submit is a manual step for your
+  team
+
+  Want me to move on to the A2-core pipeline implementation (loader.py →
+  preprocess.py → layout.py → ocr.py → chunk.py → embed.py → store.py) next, or
+  would you rather review these files first?
+
+✻ Cogitated for 28m 15s
