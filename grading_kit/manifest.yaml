@@ -14,7 +14,7 @@ axes:
 
 corpus:
   path: data/raw/                   # where the scanned page-images live
-  pages: 609                        # usable pages (653 raw - 44 flagged thumbnail/corrupt); computed in notebooks/eda.ipynb
+  pages: 653                        # all raw pages are usable; the earlier 609 (653 - 44 wrongly flagged as thumbnail/corrupt) was a bug, fixed in notebooks/eda.ipynb
   words: 0                          # not countable yet — handwritten corpus, no text layer until A2's VLM/HTR reader runs (A1 estimate: ~95,000)
   provenance: data/provenance.md    # source + licence + counts
 
