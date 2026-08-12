@@ -14,8 +14,8 @@ axes:
 
 corpus:
   path: data/raw/                   # where the scanned page-images live
-  pages: 653                        # all raw pages are usable; the earlier 609 (653 - 44 wrongly flagged as thumbnail/corrupt) was a bug, fixed in notebooks/eda.ipynb
-  words: 0                          # not countable yet — handwritten corpus, no text layer until A2's VLM/HTR reader runs (A1 estimate: ~95,000)
+  pages: 652                        # 653 raw - 1 (dolil_30, confirmed non-content: an Instagram screenshot, not a scan); the earlier 609 (44 wrongly flagged as thumbnail/corrupt) was a bug, fixed in notebooks/eda.ipynb
+  words: 78000                      # conservative estimate: 652 pages x 120 words/page; 5 hand-counted pages ran 259-447 words each, so 120 is a floor not a typical value. Clears the >=60,000 floor. See data/provenance.md.
   provenance: data/provenance.md    # source + licence + counts
 
 heldout:
