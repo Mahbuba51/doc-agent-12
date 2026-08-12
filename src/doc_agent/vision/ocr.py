@@ -2,9 +2,23 @@
 
 Single-pass VLM reading (Step 0 decision D2): one Qwen2.5-VL call per region, no
 GraDeT-HTR stage and no confidence-routed fallback. A two-stage reader needs a calibrated
-confidence signal to route on, and there is no OCR accuracy measurement yet -- the held-out
-labels are unfilled -- so the fallback branch would be tuned against nothing. Revisit once
-eval/metrics.py:ocr_f1 scores the held-out pages.
+confidence signal to route on, and there is no OCR accuracy measurement yet, so the
+fallback branch would be tuned against nothing. Revisit once eval/metrics.py:ocr_f1 scores
+the held-out pages.
+
+The GraDeT-HTR + DocLayout-YOLO path is DEFERRED, NOT REJECTED. It was always intended as
+a Bangla-handwriting-specific fallback for when the single VLM underperforms (DocLayout-YOLO
+only because GraDeT-HTR does no layout detection of its own). Deferring it is a sequencing
+call -- measure the single pass first, then decide -- not a judgement that it is the wrong
+fallback.
+
+CHECKPOINT: Qwen2.5-VL-3B-Instruct, run LOCALLY (config.yaml ocr.model). Local inference is
+a deliberate design constraint, not a convenience: a production land-deed system handles
+sensitive records, and hosted LLM APIs may retain what is sent to them. Note precisely that
+THIS corpus is public (Mendeley Dolil, CC BY 4.0) and carries no such risk itself -- the
+constraint is about the deployment this project models. 3B over 7B because 7B fp16 does not
+fit the available T4, and 3B avoids a quantization toolchain whose build can break; if
+ocr_f1 says 3B is not enough, escalating to 7B-AWQ is then an evidence-backed change.
 
 One Chunk per PAGE, not per region: Stage 4's legal-semantic chunker cuts on deed and
 paragraph boundaries, and it cannot find a boundary that spans two regions if this stage

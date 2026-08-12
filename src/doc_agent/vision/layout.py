@@ -1,11 +1,34 @@
 """Stage 2 — layout detection / segmentation
 
-Training-free projection heuristic (Step 0 decision D1). The corpus is dense handwritten
-deed body text with no tables and no multi-column pages, so a detector's general region
-typing would buy classes this corpus does not contain, at the cost of a checkpoint, a GPU
-pass per page, and another pinned dependency. Ink projected onto the vertical axis is
-enough: handwritten lines produce clear ink bands, and the blank runs between paragraphs
-are wider than the leading within one.
+Training-free projection heuristic (Step 0 decision D1). Most pages are dense handwritten
+deed body text, where ink projected onto the vertical axis is enough: handwritten lines
+produce clear ink bands, and the blank runs between paragraphs are wider than the leading
+within one. The heuristic costs no checkpoint, no GPU pass per page and no extra pinned
+dependency.
+
+D1 RATIONALE CORRECTED 2026-08-12. This docstring previously claimed the corpus has "no
+tables and no multi-column pages". That is FALSE and the decision must not be defended on
+it. Measured over all 653 raw pages (crop to the paper first, then threshold ink -- an
+Otsu pass over a whole phone photo separates paper from the surface it was shot on, not
+ink from paper, and gives nonsense):
+
+    widest interior ink-free gutter / inked span
+    p50 0.000   p90 0.026   p95 0.048   p99 0.109
+    > 0.06 of span:  23 pages (3.5%)     > 0.15 of span: 4 pages (0.6%)
+
+and dolil_74 is a তফসিল (schedule) laid out as a FOUR-COLUMN TABLE. Treat 3.5% as a LOWER
+BOUND on tabular pages, not a rate: a wide-gutter test finds two-column splits but misses
+dense tables whose inter-column gaps are narrow. Horizontal projection will merge such
+columns into single bands and scramble reading order on those pages.
+
+The decision still stands, on a different and narrower argument: reading is a single VLM
+call over the whole page (D2), so the VLM sees the table itself and layout governs only
+cropping. Revisit if ocr_f1 turns out to be materially worse on tabular pages -- that is
+the measurement that should decide it, not this docstring.
+
+ALSO UNHANDLED: some pages are rotated 90 degrees in-content (e.g. dolil_429), which EXIF
+correction does not fix and which defeats horizontal projection outright. Prevalence not
+yet measured.
 
 Every region is emitted as kind="text". Heading/table/figure are left unused rather than
 guessed at -- an unconsumed class nobody evaluates is untested surface, and the reader
