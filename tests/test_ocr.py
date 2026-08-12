@@ -47,9 +47,7 @@ def corpus(tmp_path):
     records = []
     for n, doc in ((1, "deed_001"), (2, "deed_001"), (3, "deed_007")):
         path = _write_page(raw / f"dolil_{n}.jpg")
-        records.append(
-            {"page_id": f"dolil_{n}", "doc_id": doc, "greyscale_path": str(path)}
-        )
+        records.append({"page_id": f"dolil_{n}", "doc_id": doc, "greyscale_path": str(path)})
     (tmp_path / "preprocess.jsonl").write_text(
         "\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8"
     )
@@ -172,9 +170,7 @@ def test_page_as_doc_fallback_only_applies_when_explicitly_allowed(corpus):
     (corpus / "preprocess.jsonl").unlink()
     regions = _regions("dolil_1", (0, 0, 100, 50))
 
-    chunk = ocr.transcribe(
-        regions, _cfg(corpus, allow_page_as_doc=True), reader=FakeReader()
-    )[0]
+    chunk = ocr.transcribe(regions, _cfg(corpus, allow_page_as_doc=True), reader=FakeReader())[0]
 
     assert chunk.doc_id == "dolil_1"
 

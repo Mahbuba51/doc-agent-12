@@ -36,9 +36,7 @@ FIELD_PROMPTS = {
 
 def load_records() -> list[dict]:
     return [
-        json.loads(line)
-        for line in LABELS.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in LABELS.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -102,9 +100,7 @@ def transcribe(record: dict) -> bool:
         if not value:
             continue
         record.setdefault("fields", {})[key] = (
-            [v.strip() for v in value.split(",") if v.strip()]
-            if key == "party_names"
-            else value
+            [v.strip() for v in value.split(",") if v.strip()] if key == "party_names" else value
         )
 
     record["notes"] = (record.get("notes", "") + " | HUMAN-TRANSCRIBED").lstrip(" |")
