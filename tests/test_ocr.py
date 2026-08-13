@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import unicodedata
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -16,6 +17,18 @@ from PIL import Image
 
 from doc_agent.contracts import Region
 from doc_agent.vision import ocr
+
+# The shipped layout parameters (configs/config.yaml), so the harness tests exercise the
+# same segmentation the baseline run will.
+_LAYOUT = {
+    "model": "projection-heuristic",
+    "score_thr": 0.5,
+    "min_ink_frac": 0.01,
+    "line_gap_px": 18,
+    "min_height_px": 10,
+    "min_width_px": 30,
+    "pad_px": 4,
+}
 
 
 def _write_page(path, size=(200, 300)):
@@ -231,3 +244,193 @@ def test_crop_size_matches_the_bbox_on_an_exif_rotated_page(tmp_path):
     crop = reader.crop(Region(page_id="dolil_212", bbox=(0, 0, 100, 120), kind="text"))
 
     assert crop.size == (100, 120)
+
+
+# --- generation stats -------------------------------------------------------------------
+# The pilot read (977803f) confirmed two defects on dense pages: output truncated at the
+# token cap, and repetition loops. Both look identical downstream -- a short, wrong chunk --
+# so the reader records how many tokens each call actually generated and whether it hit the
+# cap. Without it, a low ocr_f1 cannot distinguish "the model cannot read this" from "we cut
+# it off mid-page", and the 3B-vs-7B decision would be made on the wrong evidence.
+#
+# The VLM is faked at the processor/model seam: the real one is a 3B checkpoint that needs a
+# GPU, and what is under test here is the bookkeeping around generate(), not generate().
+
+
+class _FakeBatch(dict):
+    """What a processor returns: a mapping whose .to(device) yields itself."""
+
+    def to(self, device):
+        return self
+
+
+class _FakeProcessor:
+    """The three processor calls transcribe_region makes, and nothing else."""
+
+    def __init__(self, prompt_tokens=5, decoded="পড়া"):
+        self.prompt_tokens = prompt_tokens
+        self.decoded = decoded
+
+    def apply_chat_template(self, messages, tokenize=False, add_generation_prompt=True):
+        return "<prompt>"
+
+    def __call__(self, text=None, images=None, return_tensors=None):
+        import torch
+
+        self.images = images
+        return _FakeBatch(input_ids=torch.zeros((1, self.prompt_tokens), dtype=torch.long))
+
+    def decode(self, ids, skip_special_tokens=True):
+        return self.decoded
+
+
+class _FakeModel:
+    """Emits exactly `generated` new tokens after the prompt."""
+
+    device = "cpu"
+
+    def __init__(self, generated):
+        self.generated = generated
+
+    def generate(self, **kwargs):
+        import torch
+
+        prompt_len = kwargs["input_ids"].shape[1]
+        return torch.zeros((1, prompt_len + self.generated), dtype=torch.long)
+
+
+def _fake_reader(corpus, generated, **overrides):
+    reader = ocr.Reader(_cfg(corpus, **overrides))
+    reader._processor = _FakeProcessor()
+    reader._model = _FakeModel(generated)  # non-None, so _load() stays a no-op
+    return reader
+
+
+def test_transcribe_region_records_a_stat_per_region(corpus):
+    reader = _fake_reader(corpus, generated=40)
+
+    reader.transcribe_region(Region(page_id="dolil_1", bbox=(0, 0, 100, 50), kind="text"))
+    reader.transcribe_region(Region(page_id="dolil_2", bbox=(0, 0, 100, 50), kind="text"))
+
+    assert [s["page_id"] for s in reader.generation_stats] == ["dolil_1", "dolil_2"]
+    assert [s["generated_tokens"] for s in reader.generation_stats] == [40, 40]
+
+
+def test_a_read_that_hits_the_token_cap_is_flagged_truncated(corpus):
+    reader = _fake_reader(corpus, generated=64, max_new_tokens=64)
+
+    reader.transcribe_region(Region(page_id="dolil_1", bbox=(0, 0, 100, 50), kind="text"))
+
+    assert reader.generation_stats[-1]["truncated"] is True
+
+
+def test_a_read_that_stops_before_the_cap_is_not_flagged(corpus):
+    reader = _fake_reader(corpus, generated=63, max_new_tokens=64)
+
+    reader.transcribe_region(Region(page_id="dolil_1", bbox=(0, 0, 100, 50), kind="text"))
+
+    assert reader.generation_stats[-1]["truncated"] is False
+
+
+def test_stats_survive_a_full_transcribe_run(corpus):
+    """transcribe() owns the region loop, so the stats have to be readable after it.
+
+    This is how the scoring harness attributes truncation to a page.
+    """
+    reader = _fake_reader(corpus, generated=64, max_new_tokens=64)
+    regions = _regions("dolil_1", (0, 0, 100, 50)) + _regions("dolil_2", (0, 0, 100, 50))
+
+    ocr.transcribe(regions, _cfg(corpus), reader=reader)
+
+    assert [s["page_id"] for s in reader.generation_stats] == ["dolil_1", "dolil_2"]
+    assert all(s["truncated"] for s in reader.generation_stats)
+
+
+# --- the held-out scoring harness -------------------------------------------------------
+# scripts/score_heldout.py is the baseline measurement itself, so its assembly is tested
+# here with a fake reader. Loaded by path because scripts/ is not an importable package.
+
+
+def _harness():
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "score_heldout.py"
+    spec = importlib.util.spec_from_file_location("score_heldout", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _labels(tmp_path, rows):
+    path = tmp_path / "labels.jsonl"
+    path.write_text(
+        "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n", encoding="utf-8"
+    )
+    return path
+
+
+def test_only_human_completed_labels_are_scored(tmp_path):
+    """A TODO row has no transcription -- scoring against it would score against "".
+
+    Silently treating an unfilled label as empty gold would report a confident 0.0 for a
+    page nobody has read yet, which is worse than reporting nothing.
+    """
+    harness = _harness()
+    path = _labels(
+        tmp_path,
+        [
+            {"page_id": "dolil_13", "status": "done", "text": "ক খ"},
+            {"page_id": "dolil_11", "status": "TODO", "text": ""},
+        ],
+    )
+
+    assert harness.load_gold(path) == {"dolil_13": "ক খ"}
+
+
+def test_a_perfect_read_scores_one_per_page(corpus):
+    harness = _harness()
+    cfg = _cfg(corpus, allow_page_as_doc=True)
+    cfg["layout"] = _LAYOUT
+
+    rows = harness.score_pages({"dolil_1": "ক খ গ"}, cfg, reader=FakeReader(["ক খ গ"]))
+
+    assert [r["page_id"] for r in rows] == ["dolil_1"]
+    assert rows[0]["f1"] == 1.0
+
+
+def test_a_missed_page_scores_zero_rather_than_disappearing(corpus):
+    """An unreadable page produces no chunk (by design). It still has to appear at 0.0."""
+    harness = _harness()
+    cfg = _cfg(corpus, allow_page_as_doc=True)
+    cfg["layout"] = _LAYOUT
+
+    rows = harness.score_pages({"dolil_1": "ক খ গ"}, cfg, reader=FakeReader([""]))
+
+    assert [r["page_id"] for r in rows] == ["dolil_1"]
+    assert rows[0]["f1"] == 0.0
+
+
+def test_truncation_is_attributed_to_the_page_it_happened_on(corpus):
+    harness = _harness()
+    cfg = _cfg(corpus, allow_page_as_doc=True, max_new_tokens=64)
+    cfg["layout"] = _LAYOUT
+    reader = _fake_reader(corpus, generated=64, max_new_tokens=64, allow_page_as_doc=True)
+
+    rows = harness.score_pages({"dolil_1": "ক খ"}, cfg, reader=reader)
+
+    assert rows[0]["truncated"] is True
+    assert rows[0]["generated_tokens"] == 64
+
+
+def test_summary_reports_mean_f1_and_the_truncation_count():
+    harness = _harness()
+    rows = [
+        {"page_id": "a", "f1": 1.0, "truncated": True},
+        {"page_id": "b", "f1": 0.5, "truncated": False},
+    ]
+
+    summary = harness.summarise(rows)
+
+    assert summary["pages"] == 2
+    assert summary["mean_f1"] == pytest.approx(0.75)
+    assert summary["truncated_pages"] == 1

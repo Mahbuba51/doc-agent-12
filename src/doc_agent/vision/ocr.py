@@ -122,6 +122,10 @@ class Reader:
         self.pages = load_page_index(cfg)
         self._model = None
         self._processor = None
+        # Per-region generation bookkeeping, read back by scripts/score_heldout.py. A short
+        # chunk looks the same downstream whether the model stopped or we cut it off at the
+        # cap, and those call for opposite fixes -- a bigger model vs a bigger budget.
+        self.generation_stats: list[dict[str, object]] = []
 
     def crop(self, region: Region) -> Image.Image:
         """The region's pixels, cut from its page image, in display orientation.
@@ -165,10 +169,19 @@ class Reader:
         inputs = self._processor(text=[prompt], images=[image], return_tensors="pt").to(
             self._model.device
         )
-        generated = self._model.generate(
-            **inputs, max_new_tokens=int(self.cfg["max_new_tokens"]), do_sample=False
-        )
+        max_new_tokens = int(self.cfg["max_new_tokens"])
+        generated = self._model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         trimmed = generated[0][inputs["input_ids"].shape[1] :]
+        # Greedy decoding stops on EOS, so reaching the cap means the page was cut off
+        # mid-transcription rather than finished.
+        n_generated = int(trimmed.shape[0])
+        self.generation_stats.append(
+            {
+                "page_id": region.page_id,
+                "generated_tokens": n_generated,
+                "truncated": n_generated >= max_new_tokens,
+            }
+        )
         return self._processor.decode(trimmed, skip_special_tokens=True)
 
 
