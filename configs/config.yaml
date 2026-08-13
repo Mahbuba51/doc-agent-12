@@ -2,6 +2,12 @@
 seed: 42
 device: cpu
 
+# Stage 1 preprocess — classical deskew/denoise/binarize (design_choices.md Row 1).
+# skew_range/step: projection-profile search window. sauvola_*: local adaptive threshold
+# for the binary copy (window/k/r per Sauvola 2000). quality_*: high-pass blur-variance
+# legibility proxy; pages scoring below quality_threshold are flagged low_legibility in
+# the sidecar, not dropped -- Stage 3 decides what to do with a flagged page, not this one.
+preprocess: {skew_range_deg: 4.0, skew_step_deg: 0.5, sauvola_window: 15, sauvola_k: 0.2, sauvola_r: 128.0, quality_blur_radius: 3, quality_norm: 40.0, quality_threshold: 0.35, out_dir: "data/interim/preprocessed"}
 enhance:   {enabled: false, model: "none", type: "none"}   # or "vae" / "none"
 # Stage 2 layout — training-free projection heuristic (docs Step 0 decision D1).
 # NOT because the corpus lacks tables: it has them (dolil_74 is a 4-column তফসিল; >=3.5% of
