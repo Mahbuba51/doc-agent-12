@@ -14,8 +14,8 @@ axes:
 
 corpus:
   path: data/raw/                   # where the scanned page-images live
-  pages: 652                        # 653 raw - 1 (dolil_30, confirmed non-content: an Instagram screenshot, not a scan); the earlier 609 (44 wrongly flagged as thumbnail/corrupt) was a bug, fixed in notebooks/eda.ipynb
-  words: 78000                      # conservative estimate: 652 pages x 120 words/page; 5 hand-counted pages ran 259-447 words each, so 120 is a floor not a typical value. Clears the >=60,000 floor. See data/provenance.md.
+  pages: 546                        # 653 raw - 2 non-content (dolil_30, dolil_412) - 105 confirmed duplicate re-scans (still on disk, excluded from data/deed_groups.csv). The earlier 609 (44 wrongly flagged as thumbnail/corrupt) was a bug, fixed in notebooks/eda.ipynb.
+  words: 65500                      # conservative estimate: 546 DISTINCT pages x 120 words/page; 5 hand-counted pages ran 259-447 words each, so 120 is a floor not a typical value. Clears the >=60,000 floor by a narrow ~9% margin (corrected from an earlier 78000 estimate that double-counted duplicate pages). See data/provenance.md.
   provenance: data/provenance.md    # source + licence + counts
 
 heldout:
