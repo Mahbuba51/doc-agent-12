@@ -4,3 +4,7 @@ data/interim/
 wandb/
 __pycache__/
 .venv/
+/test_indexing.py
+/test_index_pipeline.py
+/index_pipelin_result.txt
+/chunk_results/

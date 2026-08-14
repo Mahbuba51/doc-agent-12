@@ -15,8 +15,8 @@ layout:    {model: "projection-heuristic", score_thr: 0.5, min_ink_frac: 0.01, l
 # Region carries only page_id. allow_page_as_doc: emergency standalone mode, leaks by design.
 # ascii_digits: map Bangla numerals to ASCII (A1 form commits to this for Exact Match).
 ocr:       {model: "Qwen/Qwen2.5-VL-3B-Instruct", finetune: false, sidecar: "data/interim/preprocessed/preprocess.jsonl", pages_dir: "data/raw", deed_groups: "data/deed_groups.csv", allow_page_as_doc: false, ascii_digits: true, max_new_tokens: 768}    # BASELINE = pretrained OCR
-embed:     {model: "BAAI/bge-m3", dim: 1024}
-index:     {type: "faiss:flat", chunk_tokens: 256, overlap: 32}
+embed:     {model: "intfloat/multilingual-e5-small", dimension: 384, max_model_tokens: 512, device: "cpu", dtype: "float32", cache_dir: ".hf_cache", document_prefix: "passage: ", query_prefix: "query: ", normalize_embeddings: true, initial_batch_size: 8}
+index:     {type: "faiss:flat", path: "data/interim/index", merge_below_tokens: 80, target_min_tokens: 200, target_max_tokens: 300, preferred_max_tokens: 350, hard_max_tokens: 450, chunk_tokens: 450, overlap: 40}
 retrieve:  {k: 10, k_step: 10, k_max: 40, weak_threshold: 0.35, rerank: true, reranker: "cross-encoder/ms-marco-MiniLM-L6-v2"}   # k_step/k_max/weak_threshold drive evidence-gated re-search
 agent:     {max_steps: 8, autonomy: "act-with-approval", budget_usd: 0.05}
 rl:        {algo: "ppo", train_policy: false}                         # bonus: set true
