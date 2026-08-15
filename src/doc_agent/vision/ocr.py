@@ -135,12 +135,35 @@ def load_page_index(cfg: dict) -> dict[str, dict[str, str]]:
 
     groups = _load_deed_groups(params)
     index = {}
+    excluded: list[str] = []
     for path in sorted(pages_dir.iterdir()):
         if not path.is_file() or path.suffix.lower() not in _IMAGE_SUFFIXES:
             continue
         page_id = path.stem
-        doc_id = groups[page_id] if groups is not None else page_id
+        if groups is None:
+            doc_id = page_id
+        else:
+            # The grouping defines the corpus: 105 duplicate re-scans and 2 non-content pages
+            # carry no row (data/provenance.md). Such a page is EXCLUDED, not an error -- and
+            # skipping it is not the doc_id invention this module refuses to do, because an
+            # excluded page has a correct answer: leave it out. Failing hard here meant one
+            # dedup pass took down every caller, including scripts/score_heldout.py.
+            grouped = groups.get(page_id)
+            if grouped is None:
+                excluded.append(page_id)
+                continue
+            doc_id = grouped
         index[page_id] = {"image_path": str(path), "doc_id": doc_id}
+
+    if excluded:
+        logger.warning(
+            "%d page(s) in %s are absent from the deed grouping and were excluded, e.g. %s. "
+            "If one of these is a page you meant to read, it needs a row in %s.",
+            len(excluded),
+            pages_dir,
+            excluded[:5],
+            params["deed_groups"],
+        )
     return index
 
 

@@ -160,6 +160,20 @@ def main(argv: list[str] | None = None) -> int:
         unknown = [page_id for page_id in args.page if page_id not in gold]
         if unknown:
             print(f"no finished label for: {', '.join(unknown)}", file=sys.stderr)
+    # A labelled page is only scorable if its image is here AND it survived the dedup. Ten of
+    # the 17 gold pages live in gitignored data/raw/, and dolil_66 was dropped from the deed
+    # grouping entirely -- so report what is being left out and score the rest, rather than
+    # letting one unresolved page block all measurement. score_pages itself stays strict.
+    index = ocr.load_page_index(cfg)
+    unscorable = sorted(set(gold) - set(index))
+    if unscorable:
+        print(
+            f"skipping {len(unscorable)} labelled page(s) with no image in {HELDOUT_PAGES} "
+            f"or no row in the deed grouping: {', '.join(unscorable)}",
+            file=sys.stderr,
+        )
+        gold = {page_id: text for page_id, text in gold.items() if page_id in index}
+
     if not gold:
         print("nothing to score -- no label has status 'done' with text", file=sys.stderr)
         return 1

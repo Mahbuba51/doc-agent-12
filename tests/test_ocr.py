@@ -179,6 +179,39 @@ def test_without_a_sidecar_or_deed_groups_it_refuses_to_invent_doc_ids(corpus):
         ocr.transcribe(regions, _cfg(corpus), reader=FakeReader())
 
 
+def _write_groups(tmp_path, mapping):
+    path = tmp_path / "deed_groups.csv"
+    rows = ["page_id,doc_id,confidence,notes,duplicate_of"]
+    rows += [f"{page_id},{doc_id},manual,," for page_id, doc_id in mapping.items()]
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    return path
+
+
+def test_a_page_missing_from_the_deed_grouping_is_skipped(corpus):
+    """The grouping DEFINES the corpus, so a page with no row is excluded, not an error.
+
+    105 duplicate re-scans and 2 non-content pages have no row (data/provenance.md). Skipping
+    them is not the same as inventing a doc_id -- the guard this module defends is against
+    fabricating one, and an excluded page has a correct answer: leave it out. Failing hard
+    instead means one dedup pass takes down the whole reader.
+    """
+    (corpus / "preprocess.jsonl").unlink()
+    _write_groups(corpus, {"dolil_1": "deed_001", "dolil_3": "deed_007"})  # dolil_2 excluded
+
+    index = ocr.load_page_index(_cfg(corpus))
+
+    assert sorted(index) == ["dolil_1", "dolil_3"]
+
+
+def test_pages_that_are_in_the_grouping_keep_their_doc_id(corpus):
+    (corpus / "preprocess.jsonl").unlink()
+    _write_groups(corpus, {"dolil_1": "deed_001", "dolil_3": "deed_007"})
+
+    index = ocr.load_page_index(_cfg(corpus))
+
+    assert [index[p]["doc_id"] for p in ("dolil_1", "dolil_3")] == ["deed_001", "deed_007"]
+
+
 def test_page_as_doc_fallback_only_applies_when_explicitly_allowed(corpus):
     (corpus / "preprocess.jsonl").unlink()
     regions = _regions("dolil_1", (0, 0, 100, 50))
