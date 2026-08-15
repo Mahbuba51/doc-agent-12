@@ -1,0 +1,211 @@
+Header
+Member Name: Farhana Adri
+Student Number: 2105089
+Sections Led: 5,7
+-------------------------------------------------------------------------------------
+Full LLM Conversation:
+
+
+User: ROLE
+You are an expert AI engineer and planner specializing in document processing pipelines and RAG systems.
+
+PROJECT OVERVIEW
+This is a Deep Learning project with a document processing codebase. The project involves building a document ingestion and retrieval pipeline with multiple steps.
+
+INITIAL SETUP INSTRUCTIONS
+Start by reading the README.md file in the root directory. Follow all instructions in README.md and read all the referenced files there step by step to understand the project structure and requirements. Read STRUCTURE.md to understand codebase restrictions and organization. Review all form documents (A1-form, A2-form, etc.) to understand deliverables for each submission. The A1-form contains the initial iteration of specs in the project walkthrough.
+
+TEAM STRUCTURE
+Team size: 3 members. My role: Adri (2105089). Current phase: Working on A2 deliverables.
+
+INITIAL TASK ALLOCATION FOR A2
+Aishi (2105022): Code Step1 loader.py, Step2 preprocessing.py + enhance.py identity, deed_groups.csv. Works against real data/raw/. Also owns Step0 decisions doc, manifest word count. Form sections 1, 2.
+
+Sinthia (2105078): Code Step3 layout.py, Step4 ocr.py + Reader. Works against 20 JPEGs copied to a scratch folder, Page objects built by hand. Also owns full-corpus OCR run, OCR metric in kb_demo. Form sections 3, 4, 6.
+
+Adri (2105089) - THIS IS ME: Code Step5 chunk.py, Step6 embed.py, Step7 store.py, pii.py, Step8 build_index.sh. Works against a fake pages.jsonl with typed Bangla sample text. Also owns Step10 diagram, Step11 design rows 2-4, retrieval half of kb_demo. Form sections 5, 7.
+
+CURRENT SITUATION
+My teammates Aishi and Sinthia have already uploaded some work. I do not know what work they have completed or what the current status is.
+
+YOUR TASK
+Phase 1: Codebase Audit. Study the entire codebase thoroughly. Analyze the git commit history. Identify what work Aishi and Sinthia have already completed. Determine the current status of each step in the pipeline. Note any changes or deviations from the original A1-form decisions.
+
+Phase 2: Gap Analysis. Compare completed work against A2 deliverables. Identify what is still pending for my sections, Steps 5-8, Step 10, Step 11. Check dependencies between my work and my teammates' work. Identify integration issues or inconsistencies.
+
+Phase 3: Planning. Create a detailed, actionable plan for me, Adri, for A2 that maintains consistency with decisions in A1-form, accounts for changes my teammates have made, stays within the scope of A2 deliverables, prioritizes tasks based on dependencies, and includes concrete next steps.
+
+DELIVERABLE
+Generate a comprehensive plan in plan.md with the following structure: Executive Summary, Audit Findings, Gap Analysis, Task Breakdown, Timeline, Dependencies, Risk Assessment.
+
+CONSTRAINTS
+Plan must be detailed but not exceed 300 lines. Plan must be machine-readable so Codex can reference it later. All tasks must align with A2 form deliverables. Must maintain consistency with A1-form decisions. Begin by auditing the codebase and commit history, then generate plan.md. Do not touch any other segments of the codebase yet.
+
+LLM: I audited the project from the repository root as requested. I read the root README, SUBMISSION.md, STRUCTURE.md, the handbook files, and the A1/A2/A3/A4 forms to understand the required deliverables and the codebase restrictions. I also inspected the pipeline modules, notebooks, reports, data metadata, tests, configuration, git history, and the current branch state before creating the plan.
+
+The audit found that Aishi had completed most of the data setup and loader work, including raw-data handling, provenance/manifest work, held-out image selection, split files, data validation/versioning, a fetch script, and loader.py. However, preprocess.py was still effectively a stub, the enhancement path only worked as identity because enhancement was disabled, and deed_groups.csv still had many unreviewed groups. I also found split leakage risks: all eight held-out pages were assigned to train or validation, and many near-duplicate deed pairs crossed splits.
+
+For Sinthia's work, I found that layout.py and ocr.py had been implemented with tests, including projection-based layout grouping and Qwen reader plumbing. The remaining issues were that the full OCR run, final OCR metric, operational runtime compatibility, and complete held-out labels were not done yet. I also noted limitations around tables, multicolumn pages, rotation, and a dependency mismatch between the intended Qwen2.5-VL usage and the locked transformer/runtime setup.
+
+For Adri's owned A2 work, I found that index/chunk.py, embed.py, store.py, pii.py, and build_index.sh still needed real implementation or correction. The build_index.sh script was especially risky because it called both ingest and index targets, while both targets ran the full knowledge-base build, causing duplicate full-pipeline execution. I also found that kb_demo.ipynb was blank, reports/pipeline_diagram.md was still a stub, the design rows for stages 2-4 were empty, and the A2 form still needed Adri's sections.
+
+I compared these findings with the A1 decisions and noted several deviations that the A2 plan must handle carefully. These included the shift from DocLayout-YOLO to a projection heuristic, the shift from Qwen plus GraDeT to Qwen-only OCR, the need to keep A2 indexing simpler than the later hybrid/reranker plan, the practical choice of FAISS plus JSONL for A2 rather than PostgreSQL, and the unresolved PII policy conflict around raw names versus redaction.
+
+I then created plan.md in the repository root with the required sections: Executive Summary, Audit Findings, Gap Analysis, Task Breakdown, Timeline, Dependencies, Risk Assessment, and a Definition of A2 Done. The plan is machine-readable, uses stable task IDs such as ADRI-00 through ADRI-13 plus team gates, stays under the 300-line limit, and focuses only on Adri's A2 deliverables. I did not change implementation files or other codebase segments.
+
+User: The internet disconnected for a bit. Continue your work.
+
+LLM: I continued from the completed audit state and confirmed the deliverable was already generated. The final plan.md file had 192 lines, which satisfies the under-300-line constraint, and the required headings were present. I also checked that git diff validation was clean for the new plan file and that the only intended new file from my work was plan.md.
+
+The final status was that plan.md had been created successfully at the repository root. Existing unrelated worktree items, including a modified .gitignore and an untracked .env, were preserved and not inspected or changed. No code, notebook, report, or form implementation files were edited.
+
+User: Given below is the high-level design of the embedding and indexing stages of our A2 knowledge-base pipeline. First inspect the existing codebase and adapt this design to its current interfaces, files, schemas, and conventions rather than introducing unnecessary new abstractions. Implement hierarchical layout-aware paragraph chunking, E5 embeddings, and FAISS IndexFlatIP indexing while preserving metadata.
+
+LLM: I inspected the repository structure, the locked contracts, pipeline order, config, and existing placeholder index modules. The implementation was adapted to the current codebase rather than adding new contracts or changing the pipeline. Since `Chunk` has no metadata field and `contracts.py` is locked, paragraph and split metadata were kept as sidecar metadata and later written to JSONL by the store layer. The index stage was implemented across `src/doc_agent/index/chunk.py`, `embed.py`, and `store.py`, with configuration added in `configs/config.yaml`. The pipeline remains `chunk.split(text, cfg)`, then `embed.encode(chunks, cfg)`, then `store.build(chunks, vectors, cfg)`.
+
+User: You have my permission to set these up and install: Could not run pytest, black, or mypy because they are not installed in the project .venv. I also did not run real E5 model inference, since that may require a local model cache or network download. Ensure the entire pipeline works with real FAISS and the model.
+
+LLM: I installed the project dev extras into `.venv`, including `pytest`, `black`, and `mypy`, and verified the real Stage 4 path with FAISS and the actual `intfloat/multilingual-e5-small` model. The install required network access for pip. After installation, `pytest` passed with 56 passed and 10 skipped, `black --check src\doc_agent\index` passed, `ruff check src\doc_agent\index` passed, and `mypy src\doc_agent\index` passed. A real E5 plus FAISS smoke test produced normalized 384-dimensional float32 embeddings, wrote a FAISS `IndexFlatIP` index, loaded it back, and confirmed FAISS `ntotal` matched the chunk count.
+
+User: Okay, in configs/config.yaml, you are allowed to remove the embedding JSON from within the index JSON, and update the embed config values with that information. Then make the corresponding reference updates in the code.
+
+LLM: I moved the E5 embedding settings out of nested `index.embedding` and into the top-level `embed:` section in `configs/config.yaml`. The `index:` config now only owns FAISS and chunking parameters such as `path`, `merge_below_tokens`, `target_max_tokens`, `preferred_max_tokens`, `hard_max_tokens`, `chunk_tokens`, and `overlap`. I updated `chunk.py`, `embed.py`, and `store.py` so their private embedding config helpers read from `cfg["embed"]` instead of `cfg["index"]["embedding"]`. I re-ran validation: `pytest` passed with 56 passed and 10 skipped, Black passed, Ruff passed, mypy passed, and a real E5 plus FAISS smoke test using top-level `embed` produced `[2, 384]` vectors with FAISS `ntotal=2`.
+
+User: Hey, the output of embed.py encode is supposed to be given as input to build in pipeline.py, yet there is inconsistency there, encode only returns vectors, while build expects chunks and vectors.
+
+LLM: There is no interface mismatch in the current `pipeline.py`. The pipeline does `vectors = embed.encode(chunks, cfg)` and then `store.build(chunks, vectors, cfg)`. So `encode()` is expected to return only the vector matrix, and `store.build()` intentionally receives both the original chunks and the vectors. The chunks are needed for the metadata sidecar JSONL, while the vectors are needed for FAISS. This matches the design constraint to keep vector storage separate from chunk and page metadata. The more precise statement is that the output of `encode()` is the second input to `store.build()`, while the chunks are passed through alongside it.
+
+User: what is the need of the load function in the store.py?
+
+LLM: In store.py, build() creates and saves the vector index; load() is the matching function that reads it back later.
+
+Specifically, load(cfg) does three things:
+
+1. Reads the FAISS index from:
+
+data/interim/index/chunks.faiss
+
+2. Reads saved chunk metadata from:
+
+data/interim/index/chunks.jsonl
+
+3. Reconstructs Chunk objects from that metadata and returns:
+
+{
+    "index": index,
+    "metadata": metadata,
+    "chunks": chunks,
+}
+
+So the need for load() is: after you have already built the knowledge base once, the retrieval system should not recompute OCR, chunking, embeddings, and indexing every time someone asks a question. It can simply load the saved FAISS index and chunk records, then search them.
+
+Right now, pipeline.answer() creates retriever.Retriever(cfg), but Retriever is still unimplemented. When you implement retrieval, it will likely call store.load(cfg) inside Retriever.__init__() so it can search the saved index during retrieve().
+
+In short: build() is for indexing time; load() is for question-answering time.
+
+User: How exacly was roken overlap perfformed in chunk.py?
+
+LLM: By "roken overlap" I think you mean token overlap.
+
+In chunk.py, overlap is only applied inside _split_oversized(). That means overlap happens only when a single paragraph is too large:
+
+if token_count > hard_max:
+    _flush_pending(source, pending, out)
+    out.extend(_split_oversized(source, paragraph, len(out), tokenizer, cfg))
+
+Inside _split_oversized():
+
+chunk_size = min(
+    int(index_cfg.get("chunk_tokens", index_cfg.get("hard_max_tokens", 450))),
+    _safe_window_tokens(tokenizer, cfg),
+)
+overlap = int(index_cfg.get("overlap", index_cfg.get("split_overlap_tokens", 40)))
+overlap = max(0, min(overlap, chunk_size - 1))
+stride = chunk_size - overlap
+
+With your config.yaml:
+
+index:
+  chunk_tokens: 450
+  overlap: 40
+
+So the logic is:
+
+chunk_size = 450 tokens
+overlap = 40 tokens
+stride = 450 - 40 = 410 tokens
+
+Then it slices the oversized paragraph like this:
+
+chunk 1: tokens 0   to 450
+chunk 2: tokens 410 to 860
+chunk 3: tokens 820 to 1270
+...
+
+So each next chunk starts 40 tokens before the previous chunk ended. That repeated 40-token region is the overlap.
+
+Important detail: this overlap is not used when merging normal paragraphs. Small paragraphs are grouped up to target_max_tokens, and medium paragraphs become their own chunks. Only paragraphs bigger than hard_max_tokens are split with token windows and overlap.
+
+User: Now, I want you to implement a test that will convert the label.json objects to Chunk objexts, perform chunking, embedding and indexing on them, and then retrieve the page number and resulting chunk for a certain query. After that, ensure that the stored indexes are deleted, as this will not be my final index. have the code print to a index_pipelin_result.txt, and make sure that both these files are added to .gitignore
+
+LLM: I implemented a scratch index pipeline test at `test_index_pipeline.py`. It reads `grading_kit/labels.jsonl`, converts records into `Chunk` objects, chunks them, embeds them, builds a temporary FAISS index, retrieves top chunks for a query, writes the result to `index_pipelin_result.txt`, and deletes the temporary index directory in a `finally` block. I also added `/test_index_pipeline.py` and `/index_pipelin_result.txt` to `.gitignore`. I verified the script through the project virtual environment in offline Hugging Face mode, and the temporary index cleanup worked.
+
+User: Run it, and show me the result
+
+LLM: I attempted to run the generated scratch pipeline and then show the contents of `index_pipelin_result.txt`. The run was interrupted before completion, so I did not report a final result for that interrupted attempt.
+
+User: Can you write a query that will give chunk_id: dolil_20#c0010 as output?
+
+LLM: I inspected the text for `dolil_20#c0010` and tested a targeted query. The query `জাহাবকক পাটারি আতরজান দলিল গ্রহিতা দলিল দাত্রী ৯০ টাকা` returned `dolil_20#c0010` as rank 1 with score `0.866069`.
+
+User: Ask a normal question in the query, not copy a substring of the text to the query
+
+LLM: I changed the query to a natural question: `Which deed page mentions the buyer and seller for a 90 taka sale deed?`. Running `test_index_pipeline.py` with that query returned `dolil_20#c0010` as rank 1 with score `0.794137`.
+
+User: Convert the query to this and run again: **দলিলে জাহাবকক পাটারির পিতার নাম কী?**
+
+LLM: I ran the scratch FAISS pipeline with the exact query `দলিলে জাহাবকক পাটারির পিতার নাম কী?`. It returned `page_id: dolil_20`, `chunk_id: dolil_20#c0010` as rank 1 with score `0.834644`. From that chunk, the father name appeared to be `রহিম বকক পাটারি`.
+
+User: Now I want you to check, whether anywhere in the pipeline exact keyword matching is being done, or only embedding matcher are being checked
+
+LLM: I searched the retrieval and indexing path for keyword, substring, BM25, regex, and exact-match retrieval logic. For the scratch pipeline, retrieval is embedding-only: the query is encoded with `embed.encode_query(query, cfg)`, then FAISS searches with `loaded["index"].search(query_vector, k)`. The index is built as `faiss.IndexFlatIP(dim)` over normalized vectors. I found no substring search, no `query in chunk.text`, no keyword overlap scoring, and no BM25 in the retrieval path. I noted that `re.split(...)` in `chunk.py` is only for paragraph splitting, not retrieval matching, and that the main `Retriever` class is still unimplemented.
+
+User: ```kotlin
+দলিলে টেনু
+সাব্বির পিতার নাম কী?   Change the query  to this
+```
+
+LLM: I ran the scratch retrieval with that exact Bangla query, including the line break. It returned `page_id: dolil_605`, `chunk_id: dolil_605#c0036` as rank 1 with score `0.879938`. From that chunk, the answer appeared to be `মৃত পাহালী মাঝি`.
+
+User: Great, now you can write retrieval part of kb_demo.py, where this query is run against FAISS and the resulting chunk details is printed, along with an assert of whether the retrieved chunk pag_id is equal to the expected page_id
+
+LLM: I added a retrieval demo to `notebooks/kb_demo.ipynb`. The cell loaded label rows, converted them to `Chunk` objects, chunked, embedded, built a temporary FAISS index, ran the query `দলিলে টেনু\nসাব্বির পিতার নাম কী?`, printed the query, expected page, retrieved page, chunk id, score, and chunk text, and asserted `top_record["page_id"] == expected_page_id`. I executed the cell and it passed with `retrieved_page_id: dolil_605`, `chunk_id: dolil_605#c0036`, and score `0.879938`.
+
+User: Remove the code related to converting labels to chunk from there, the kb_demo should only ask a query against FAISS and assert the page id, as it is assumed that the FAISS will already be seeded
+
+LLM: I updated `kb_demo.ipynb` so the retrieval cell no longer converted labels or built a temporary index. It only loaded `configs/config.yaml`, loaded the already-seeded FAISS index with `store.load(cfg)`, embedded the query, searched FAISS, printed the top chunk details, and asserted the retrieved `page_id`. I did not execute that version because the configured seeded index files were not present at `data/interim/index/chunks.faiss` and `data/interim/index/chunks.jsonl`.
+
+User: Can you run test for this specific query: **কোন দলিলে দলিলমূল্য ৫০০ টাকার বেশি উল্লেখ আছে**
+
+LLM: I started to run the scratch pipeline for the query `কোন দলিলে দলিলমূল্য ৫০০ টাকার বেশি উল্লেখ আছে`, but the run was interrupted before completion.
+
+User: no no, run the test_index that you generated
+
+LLM: I ran `test_index_pipeline.py` with the query `কোন দলিলে দলিলমূল্য ৫০০ টাকার বেশি উল্লেখ আছে` and `k=5`. The top results were: rank 1 `page_id: dolil_20`, `chunk_id: dolil_20#c0010`, score `0.822747`; rank 2 `page_id: dolil_605`, `chunk_id: dolil_605#c0033`, score `0.817094`, containing `স: ২৫০০/০০ টাকা জমি ৪ ত্র`; rank 3 `page_id: dolil_348`, `chunk_id: dolil_348#c0017`; rank 4 `page_id: dolil_66`, `chunk_id: dolil_66#c0016`; and rank 5 `page_id: dolil_212`, `chunk_id: dolil_212#c0040`. I noted that the semantically best answer should likely be `dolil_605` because it explicitly has `২৫০০/০০ টাকা`, which is greater than `৫০০ টাকা`, but embedding-only retrieval ranked `dolil_20` first.
+
+User: You can change kb_demo to actually read from the labels.json, embed and index them and then the rest of the currently existing retrieval cellbox
+
+LLM: I updated `notebooks/kb_demo.ipynb` so the retrieval cell again reads `grading_kit/labels.jsonl`, converts completed human-gold label rows into `Chunk` objects, chunks them, embeds them, builds a FAISS index, runs the existing query against FAISS, prints the retrieved chunk details, and asserts the retrieved `page_id` equals `dolil_605`. I also fixed the query text back to proper Bangla: `দলিলে টেনু সাব্বির পিতার নাম কী?`. I verified the retrieval cell by executing it successfully: it built a demo index from 17 human-gold label pages, indexed 119 chunks, retrieved `dolil_605`, returned `chunk_id: dolil_605#c0068`, and scored `0.879938`.
+
+User: Run that cell again and check
+
+LLM: I executed the retrieval cell from `notebooks/kb_demo.ipynb` again. It passed. The output showed `demo index built from 17 human-gold label pages`, `chunks indexed: 119`, query `দলিলে টেনু সাব্বির পিতার নাম কী?`, `expected_page_id: dolil_605`, `retrieved_page_id: dolil_605`, `chunk_id: dolil_605#c0068`, and score `0.879938`. The assertion `assert top_record["page_id"] == expected_page_id` succeeded.
+
+User: Copy this convo to the Full LLM Conversation section of the LLM Conversations, leaving the other sections intact. at the end of the section, of the file 2105089 It should be strcutured this way: My prompt whould start with User: [My prompt], while LLM response as LLM: [LLM Respones. In this way write the convo to the Full LLM Conversation sectio
+
+LLM: I appended the recent conversation to the `Full LLM Conversation:` section of `transcripts/2105089.txt`, immediately before the dashed separator and `Reflection:` section. I preserved the existing header, earlier conversation entries, separator, and reflection text.
+
+
+-------------------------------------------------------------------------------------
+Reflection:
+I accepted a layout-aware paragraph chunking strategy because the existing layout detector already produces ordered text blocks that OCR converts into paragraph-separated text, giving the pipeline a meaningful structural unit without requiring an additional semantic segmentation model. I changed the original plan of fully semantic, layout-aware chunking because the corpus is structurally inconsistent and embedding-based boundary detection would introduce another source of segmentation error. I rejected pure fixed-size chunking as the primary method because it may arbitrarily separate related legal information such as party details, addresses, plot identifiers, and transaction context. For oversized paragraphs, I adopted a tokenizer-aware sliding-window split with configurable overlap, ensuring deterministic behavior and compliance with the embedding model’s context limit. I also reconsidered BGE-M3 in favor of multilingual-E5-small because the current design uses short paragraph-level dense retrieval, where E5 provides a simpler query-passage retrieval setup.
