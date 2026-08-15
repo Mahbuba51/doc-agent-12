@@ -1,5 +1,6 @@
 data/raw/
 data/interim/
+/data/dolil_dataset.zip
 *.ckpt
 wandb/
 __pycache__/
@@ -8,3 +9,27 @@ __pycache__/
 /test_index_pipeline.py
 /index_pipelin_result.txt
 /chunk_results/
+/scripts/print_stats.py
+/scripts/check_single_ocr.py
+
+# Kaggle A2 notebook/generated artifacts
+/docs/kaggle_mendeley_setup.md
+/notebooks/kaggle_build_kb_a2_first100.ipynb
+/notebooks/kaggle_a2_section5_index_retrieval_first20.ipynb
+/notebooks/kb_demo_with_retrieval_proof.ipynb
+/kb_demo_index_bundle/
+/a2_section5_first20_outputs/
+/kb_raw_first20/
+/kb_interim_first20/
+/deed_groups_first20.csv
+/a2_kb_chunk_stats_first100.json
+/a2_kb_chunk_metadata_first100.csv
+/deed_groups_first100.csv
+/kb_raw/
+/kb_interim/
+/hf_cache/
+/.hf_cache/
+/src/doc_agent.egg-info/
+
+# Office temporary files
+~$*
