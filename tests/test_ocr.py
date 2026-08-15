@@ -179,6 +179,39 @@ def test_without_a_sidecar_or_deed_groups_it_refuses_to_invent_doc_ids(corpus):
         ocr.transcribe(regions, _cfg(corpus), reader=FakeReader())
 
 
+def _write_groups(tmp_path, mapping):
+    path = tmp_path / "deed_groups.csv"
+    rows = ["page_id,doc_id,confidence,notes,duplicate_of"]
+    rows += [f"{page_id},{doc_id},manual,," for page_id, doc_id in mapping.items()]
+    path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    return path
+
+
+def test_a_page_missing_from_the_deed_grouping_is_skipped(corpus):
+    """The grouping DEFINES the corpus, so a page with no row is excluded, not an error.
+
+    105 duplicate re-scans and 2 non-content pages have no row (data/provenance.md). Skipping
+    them is not the same as inventing a doc_id -- the guard this module defends is against
+    fabricating one, and an excluded page has a correct answer: leave it out. Failing hard
+    instead means one dedup pass takes down the whole reader.
+    """
+    (corpus / "preprocess.jsonl").unlink()
+    _write_groups(corpus, {"dolil_1": "deed_001", "dolil_3": "deed_007"})  # dolil_2 excluded
+
+    index = ocr.load_page_index(_cfg(corpus))
+
+    assert sorted(index) == ["dolil_1", "dolil_3"]
+
+
+def test_pages_that_are_in_the_grouping_keep_their_doc_id(corpus):
+    (corpus / "preprocess.jsonl").unlink()
+    _write_groups(corpus, {"dolil_1": "deed_001", "dolil_3": "deed_007"})
+
+    index = ocr.load_page_index(_cfg(corpus))
+
+    assert [index[p]["doc_id"] for p in ("dolil_1", "dolil_3")] == ["deed_001", "deed_007"]
+
+
 def test_page_as_doc_fallback_only_applies_when_explicitly_allowed(corpus):
     (corpus / "preprocess.jsonl").unlink()
     regions = _regions("dolil_1", (0, 0, 100, 50))
@@ -434,3 +467,40 @@ def test_summary_reports_mean_f1_and_the_truncation_count():
     assert summary["pages"] == 2
     assert summary["mean_f1"] == pytest.approx(0.75)
     assert summary["truncated_pages"] == 1
+
+
+def test_rows_carry_the_deed_so_the_score_can_be_grouped(corpus):
+    rows = _harness().score_pages(
+        {"dolil_1": "ক খ"}, dict(_cfg(corpus), layout=_LAYOUT), reader=FakeReader(["ক খ"])
+    )
+
+    assert rows[0]["doc_id"] == "deed_001"
+
+
+def test_summary_macro_averages_by_deed_not_by_page():
+    """A page-mean lets one heavily-sampled deed dominate the headline number.
+
+    Ten of the seventeen gold pages belong to deed_p0038 alone, so the per-page mean largely
+    measures ONE scribe's handwriting. The by-deed macro average weights each document once,
+    which is the number that should be compared across readers.
+    """
+    rows = [
+        {"page_id": "a1", "doc_id": "deed_A", "f1": 1.0, "truncated": False},
+        {"page_id": "a2", "doc_id": "deed_A", "f1": 1.0, "truncated": False},
+        {"page_id": "a3", "doc_id": "deed_A", "f1": 1.0, "truncated": False},
+        {"page_id": "b1", "doc_id": "deed_B", "f1": 0.0, "truncated": False},
+    ]
+
+    summary = _harness().summarise(rows)
+
+    assert summary["mean_f1"] == pytest.approx(0.75)  # per page: 3 of 4 pages are perfect
+    assert summary["macro_f1_by_deed"] == pytest.approx(0.5)  # per deed: one of two is perfect
+    assert summary["deeds"] == 2
+
+
+def test_macro_average_tolerates_rows_without_a_deed():
+    """Older reports (reports/ocr_baseline.json) predate doc_id being recorded per row."""
+    summary = _harness().summarise([{"page_id": "a", "f1": 0.4, "truncated": False}])
+
+    assert summary["macro_f1_by_deed"] == pytest.approx(0.4)
+    assert summary["deeds"] == 1

@@ -96,6 +96,7 @@ def score_pages(gold: dict[str, str], cfg: dict, reader: object | None = None) -
         rows.append(
             {
                 "page_id": page.id,
+                "doc_id": page.doc_id,
                 "f1": ocr_f1(pred, gold[page.id]),
                 "regions": sum(1 for r in regions if r.page_id == page.id),
                 "pred_words": len(pred.split()),
@@ -109,10 +110,25 @@ def score_pages(gold: dict[str, str], cfg: dict, reader: object | None = None) -
 
 
 def summarise(rows: list[dict]) -> dict:
+    """Per-page stats plus the by-deed macro average.
+
+    mean_f1 alone is misleading on this gold set: ten of the seventeen labelled pages belong
+    to deed_p0038, so a per-page mean is dominated by one document's handwriting. Weighting
+    each deed once is the number to compare readers on. Both are reported -- the gap between
+    them is itself informative, because it says how lopsided the sample is.
+    """
     scores = [float(row["f1"]) for row in rows]
+    by_deed: dict[str, list[float]] = {}
+    for row in rows:
+        # Rows written before doc_id was recorded fall back to the page, i.e. one deed per page.
+        by_deed.setdefault(str(row.get("doc_id") or row["page_id"]), []).append(float(row["f1"]))
+    deed_means = [statistics.fmean(v) for v in by_deed.values()]
+
     return {
         "pages": len(rows),
+        "deeds": len(by_deed),
         "mean_f1": statistics.fmean(scores) if scores else 0.0,
+        "macro_f1_by_deed": statistics.fmean(deed_means) if deed_means else 0.0,
         "median_f1": statistics.median(scores) if scores else 0.0,
         "min_f1": min(scores) if scores else 0.0,
         "max_f1": max(scores) if scores else 0.0,
@@ -129,7 +145,9 @@ def _print_table(rows: list[dict], summary: dict) -> None:
             f"{row['generated_tokens']:>8}  {'YES' if row['truncated'] else ''}"
         )
     print(
-        f"\n{summary['pages']} page(s)  mean F1 {summary['mean_f1']:.3f}  "
+        f"\n{summary['pages']} page(s) / {summary['deeds']} deed(s)  "
+        f"mean F1 {summary['mean_f1']:.3f}  "
+        f"MACRO by deed {summary['macro_f1_by_deed']:.3f}  "
         f"median {summary['median_f1']:.3f}  "
         f"range {summary['min_f1']:.3f}-{summary['max_f1']:.3f}  "
         f"truncated {summary['truncated_pages']}"
@@ -160,6 +178,20 @@ def main(argv: list[str] | None = None) -> int:
         unknown = [page_id for page_id in args.page if page_id not in gold]
         if unknown:
             print(f"no finished label for: {', '.join(unknown)}", file=sys.stderr)
+    # A labelled page is only scorable if its image is here AND it survived the dedup. Ten of
+    # the 17 gold pages live in gitignored data/raw/, and dolil_66 was dropped from the deed
+    # grouping entirely -- so report what is being left out and score the rest, rather than
+    # letting one unresolved page block all measurement. score_pages itself stays strict.
+    index = ocr.load_page_index(cfg)
+    unscorable = sorted(set(gold) - set(index))
+    if unscorable:
+        print(
+            f"skipping {len(unscorable)} labelled page(s) with no image in {HELDOUT_PAGES} "
+            f"or no row in the deed grouping: {', '.join(unscorable)}",
+            file=sys.stderr,
+        )
+        gold = {page_id: text for page_id, text in gold.items() if page_id in index}
+
     if not gold:
         print("nothing to score -- no label has status 'done' with text", file=sys.stderr)
         return 1

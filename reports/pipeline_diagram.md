@@ -1,46 +1,87 @@
-# Knowledge-base pipeline diagram (A2)
+# Knowledge-base pipeline (A2)
+
+The fixed stage order lives in `src/doc_agent/pipeline.py:build_knowledge_base()` and may not be
+reordered. Everything below is what actually runs today, including the stage that is measured and
+rejected — this is a build report, not a plan.
 
 ```mermaid
-flowchart LR
-    L[Load pages] --> P[Preprocess]
-    P --> E[Optional enhancement]
-    E --> D[Layout detection]
-    D --> O[OCR / HTR]
-    O --> K[Chunk]
-    K --> M[Embed]
-    M --> S[Store]
+flowchart TD
+    RAW["data/raw/<br/>653 scanned JPEGs<br/>546 distinct after dedup"]
+
+    subgraph S1["Stage 1 — ingest"]
+        LOAD["loader.load_pages()<br/>deed_groups.csv → doc_id"]
+        PREP["preprocess.run()<br/>deskew ±4°, denoise,<br/>Sauvola 15/0.2/128"]
+        ENH["enhance.run()<br/><b>OFF</b> — generative repair rejected:<br/>it can reshape a stroke"]
+    end
+
+    subgraph S2["Stage 2 — layout"]
+        LAY["layout.detect()<br/>Otsu + row projection<br/>min_ink_frac .01, gap 18px"]
+    end
+
+    subgraph S3["Stage 3 — OCR/HTR"]
+        OCR["ocr.transcribe()<br/>Qwen2.5-VL-3B, greedy, 768 tok<br/><b>MEASURED: macro F1 0.022 → REJECTED</b>"]
+    end
+
+    subgraph S4["Stage 4 — index"]
+        CH["chunk.split()<br/>paragraph-aware, 200-300 tok,<br/>hard max 450, overlap 40"]
+        EMB["embed.encode()<br/>multilingual-e5-small, 384-d<br/>'passage: ' prefix, normalised"]
+        ST["store.build()<br/>FAISS IndexFlatIP<br/>+ chunks.jsonl sidecar"]
+    end
+
+    GOLD["grading_kit/labels.jsonl<br/>17 human-typed pages<br/>2,398 words"]
+    IDX[("data/interim/index/<br/>chunks.faiss + chunks.jsonl")]
+    Q(["query → embed.encode_query()<br/>'query: ' prefix → FAISS search"])
+
+    RAW --> LOAD --> PREP --> ENH --> LAY --> OCR
+    OCR -.->|"output unusable<br/>(confabulated)"| CH
+    GOLD ==>|"what the demo KB<br/>actually indexes"| CH
+    CH --> EMB --> ST --> IDX --> Q
+
+    classDef dead fill:#fdd,stroke:#c00,stroke-width:2px
+    classDef live fill:#dfd,stroke:#080
+    class OCR,ENH dead
+    class GOLD,CH,EMB,ST live
 ```
 
-## Stage descriptions
+## Contracts on each edge
 
-**Stage 1 - Load pages**
+The types are frozen in `src/doc_agent/contracts.py`; a stage may only change what flows *inside*
+them.
 
-`ingest/loader.py` reads scanned `.jpg`, `.jpeg`, and `.png` pages from the configured raw page directory. It uses `data/deed_groups.csv` as both the inclusion list and the page-to-document map, which protects document-level train/validation/test splitting. Pages marked as duplicates are skipped before indexing. The loader validates the resulting `Page` objects, snapshots the input directory for provenance, sorts pages by numeric suffix, and returns page IDs, image paths, and `doc_id`s.
+| Edge | Type | Note |
+|---|---|---|
+| loader → preprocess → enhance | `list[Page]` | `id`, `image_path`, `doc_id` |
+| layout → OCR | `list[Region]` | `page_id`, `bbox`, `kind` — always `"text"` today |
+| OCR → chunk | `list[Chunk]` | **one Chunk per PAGE**, not per region, so the chunker can still cut on deed/paragraph boundaries that span regions |
+| chunk → embed → store | `list[Chunk]` + `ndarray` | 384-d, L2-normalised, so inner product = cosine |
+| retrieval → agent | `list[Chunk]` with `.score` | Stage 5, not built yet |
 
-**Stage 1 - Preprocess**
+## Cross-cutting seams
 
-`ingest/preprocess.py` performs deterministic cleanup while preserving the original evidence. It applies EXIF orientation, estimates skew with projection profiles, rotates with a white border, denoises lightly, creates a Sauvola binary copy, and computes a blur-based quality score. It writes greyscale and binary outputs plus a JSONL sidecar containing paths, skew, quality, and legibility flags. Downstream layout and OCR use the greyscale path so they operate on the same corrected pixels.
+Horizontal features attach at fixed hook points (`hooks.py`, wired in `wiring.py`) rather than
+being inlined into stage code:
 
-**Stage 1 - Optional enhancement**
+```
+after_ingest ──► (fairness metadata)
+after_ocr    ──► governance/pii.redact      ← PII must not reach the index
+before_index ──► logging/trace
+```
 
-`ingest/enhance.py` is a configurable generative enhancement hook for VAE or diffusion-based denoise/super-resolution. In the current code, it only runs when `cfg["enhance"]["enabled"]` is true, and the `Enhancer.train()` and `Enhancer.apply()` methods remain unimplemented. If disabled, pages pass through unchanged. This avoids overprocessing legal handwriting unless a tested enhancement model is explicitly added and enabled.
+## Status, honestly
 
-**Stage 2 - Layout detection**
+| Stage | State |
+|---|---|
+| 1 Ingest | implemented; enhancement deliberately OFF |
+| 2 Layout | implemented, 12 tests. Region = page on camera-photo scans, which is expected, not a failure |
+| **3 OCR** | implemented and **measured at macro F1 0.022 against a 0.92 target** — the reader confabulates Bangla prose rather than reading handwriting, on both a 3B and a 9B model. It *does* read printed text correctly. GraDeT-HTR is the promoted candidate; weights are request-only |
+| 4 Index | implemented; no dedicated test file yet |
+| 5 Retrieval | `Retriever.retrieve()` still raises — A3 |
 
-`vision/layout.py` detects text regions using a training-free projection heuristic. It thresholds each page into an ink mask, finds horizontal ink bands, merges close gaps, filters tiny artefacts, pads bounding boxes, and emits `Region` objects in page order. Every emitted region is labeled `text`; table, figure, and heading classes are deliberately not guessed. The code acknowledges that dense or tabular pages may become page-sized regions, which is acceptable for whole-page readers.
+**Why the diagram has a dotted line into chunking.** Stage 3's output is not fit to index: filling
+the store with invented text is worse than an empty store, because retrieval would then return
+confident citations to sentences no deed contains. So the demo knowledge base is built from the 17
+human-transcribed gold pages (~3.1% of the corpus) — real Bangla legal text, honestly reported as a
+subset. `chunk`/`embed`/`store` operate on whatever text a `Chunk` carries, so the identical code
+indexes the full corpus the moment Stage 3 has a working reader.
 
-**Stage 3 - OCR / HTR**
-
-`vision/ocr.py` crops each detected region and reads it with a configured local vision-language model baseline. It normalizes Unicode and can translate Bangla digits to ASCII for exact-match evaluation. Regions are reassembled into one page-level `Chunk`, preserving document IDs from the ingest sidecar or deed grouping file. The current docstring records that Qwen2.5-VL performed poorly on held-out handwritten pages, so a Bangla HTR path is the planned replacement.
-
-**Stage 4 - Chunking**
-
-`index/chunk.py` converts page-level OCR output into retrieval-sized chunks. It splits text into paragraphs or lines, counts tokens with the embedding model tokenizer, preserves paragraph and block order metadata, merges small compatible paragraphs, and splits oversized paragraphs with token-window overlap. Chunk IDs encode the source page and order. Metadata is kept for later storage so retrieved evidence can be traced back to page IDs, document IDs, paragraph positions, and boundary types.
-
-**Stage 4 - Embedding**
-
-`index/embed.py` encodes chunk text with SentenceTransformers, defaulting to `intfloat/multilingual-e5-small`. It applies configurable document and query prefixes, batch size, device, cache directory, embedding dimension, and normalization. Empty inputs produce an empty matrix of the configured dimension. The code verifies that model output matches the configured dimension and normalizes vectors to `float32`, making them suitable for inner-product FAISS search.
-
-**Stage 4 - Storage**
-
-`index/store.py` persists the knowledge base as a FAISS flat inner-product index plus a JSONL metadata file. It validates vector shape and dimension, optionally normalizes embeddings, builds `IndexFlatIP`, writes `chunks.faiss`, and serializes chunk metadata to `chunks.jsonl`. The loader reconstructs `Chunk` objects from metadata, so retrieval can connect vector hits back to text, document IDs, page IDs, chunk IDs, and source-order information.
+Full decision records: `src/doc_agent/vision/ocr.py` (D2 MEASURED), `configs/design_choices.md`.

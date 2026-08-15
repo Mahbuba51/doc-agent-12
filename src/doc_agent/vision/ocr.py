@@ -32,10 +32,45 @@ Read the predicted text, not the F1 column: the highest-scoring cell is the one 
 LEAST. Its 14 words are mostly numerals, one of them a 90-digit run, so the score is
 numeric collision, not reading. Four cells, four cap-hits, no knob.
 
+D2 MEASURED (2) 2026-08-14 -- QWEN3.5-9B: SAME FAILURE, AND A SHARP BOUNDARY.
+Escalated across generations, not just sizes: Qwen3.5-9B (Apache-2.0, natively multimodal,
+201 languages), fp16 on 2xT4, ~1.6M px (this family is 32x32 px per visual token, patch 16 x
+merge 2 -- the 28x28 arithmetic of Qwen2.5-VL does not carry over), max_new_tokens 768, and
+enable_thinking=False because Qwen3.5 reasons by default and would otherwise spend the whole
+budget inside <think> tags.
+
+    dolil_208   f1 0.028   capped   75s
+    dolil_20    f1 0.093   capped          <- highest score recorded on this corpus
+
+Still not reading. dolil_208 came back as "it is seen that, the value of this deed is 1000
+taka and the value of this deed is 1000 taka and ..." to the cap. Where the 3B invented
+universities and artists, the 9B invents DEED boilerplate -- a better prior, not better
+reading.
+
+But dolil_20 splits the failure in two, and this is the useful part:
+
+  * PRINTED text is read CORRECTLY. "ONE RUPEE EIGHT ANNAS", "I R. 8 As.", "Sub-Registrar
+    Raipur, Dist. Noakhali", and the registration/Act stamp block all came out right -- 5 of
+    7 probe strings, the two misses (INDIA, 15.1.19) being on the embossed circular stamp.
+  * HANDWRITTEN Bangla on the same page is not read: Bangla-shaped, correctly deed-STRUCTURED
+    (names, জেলা/জাতি fields), and wrong -- then a repetition loop on one date line.
+
+So the finding is not "Qwen fails on this corpus" but the narrower, more useful:
+THE VLM READS PRINT ON THESE SCANS AND CANNOT READ THE HANDWRITING.
+Note that dolil_20's 0.093 is real signal (actual printed-English matches), unlike the 0.108
+ablation cell above, which was numeric collision. Reading the text is what tells them apart.
+
 CONSEQUENCES.
-1. 3B -> 7B-AWQ is NOT supported by this evidence, contrary to what this docstring claimed
+1. Escalation is CLOSED. 3B (2024 family) and 9B (2026 family, 3x the parameters) fail the
+   same way, so 7B-AWQ is not worth trying either -- contrary to what this docstring claimed
    before (corrected below). The gap is categorical, not marginal: a larger model with the
    same missing capability confabulates more fluently, not more accurately.
+1b. A VLM is NOT dead in this pipeline. Printed elements -- registrar block, section/Act
+   references, stamp denominations, printed serials and dates -- are exactly the verifiable
+   legal fields the precision-first NFR targets, and they are read accurately today.
+   HYPOTHESIS, not a plan until GraDeT-HTR is in hand: a hybrid reader, VLM for printed
+   regions and Bangla HTR for handwritten ones. That would finally give Region.kind a job;
+   every region is currently emitted as kind="text" (vision/layout.py).
 2. GraDeT-HTR is promoted from deferred fallback to candidate reader.
 3. That re-opens D1. GraDeT-HTR is TrOCR-style and reads LINE crops, so layout becomes
    load-bearing again -- and vision/layout.py records that 4 of the 8 held-out scans yield
@@ -43,9 +78,14 @@ CONSEQUENCES.
    segmentation on those pages is unsolved work, not a formality.
 4. OPEN, UNMEASURED: whether this same checkpoint reads PRINTED Bangla (dolil_20 carries
    printed gold). That bounds whether any VLM survives anywhere in this pipeline.
-5. This is evidence about the READER ONLY. The ~78,000-word floor in data/provenance.md
-   stands as an estimate and must NOT be revised from this run -- the reader under-extracts,
-   which is exactly the error that estimate already warns about.
+5. This is evidence about the READER ONLY. The word-count floor in data/provenance.md stands
+   as an estimate and must NOT be revised from these runs -- the reader under-extracts, which
+   is exactly the error that estimate already warns about.
+6. HOW TO COMPARE READERS: use macro_f1_by_deed, not mean_f1. Ten of the seventeen gold pages
+   are one deed (deed_p0038), so a per-page mean mostly measures one scribe's handwriting.
+   The 3B baseline above is unaffected -- its 7 pages are 7 distinct deeds, so mean and macro
+   both read 0.022 -- but every score on the current 17-page set diverges, and the GraDeT-HTR
+   comparison must be argued on the macro number.
 
 The GraDeT-HTR + DocLayout-YOLO path is PROMOTED (was: deferred, not rejected). It was
 always intended as a Bangla-handwriting-specific fallback for when the single VLM
@@ -135,12 +175,35 @@ def load_page_index(cfg: dict) -> dict[str, dict[str, str]]:
 
     groups = _load_deed_groups(params)
     index = {}
+    excluded: list[str] = []
     for path in sorted(pages_dir.iterdir()):
         if not path.is_file() or path.suffix.lower() not in _IMAGE_SUFFIXES:
             continue
         page_id = path.stem
-        doc_id = groups[page_id] if groups is not None else page_id
+        if groups is None:
+            doc_id = page_id
+        else:
+            # The grouping defines the corpus: 105 duplicate re-scans and 2 non-content pages
+            # carry no row (data/provenance.md). Such a page is EXCLUDED, not an error -- and
+            # skipping it is not the doc_id invention this module refuses to do, because an
+            # excluded page has a correct answer: leave it out. Failing hard here meant one
+            # dedup pass took down every caller, including scripts/score_heldout.py.
+            grouped = groups.get(page_id)
+            if grouped is None:
+                excluded.append(page_id)
+                continue
+            doc_id = grouped
         index[page_id] = {"image_path": str(path), "doc_id": doc_id}
+
+    if excluded:
+        logger.warning(
+            "%d page(s) in %s are absent from the deed grouping and were excluded, e.g. %s. "
+            "If one of these is a page you meant to read, it needs a row in %s.",
+            len(excluded),
+            pages_dir,
+            excluded[:5],
+            params["deed_groups"],
+        )
     return index
 
 

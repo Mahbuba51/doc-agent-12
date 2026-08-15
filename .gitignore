@@ -5,6 +5,7 @@ data/interim/
 wandb/
 __pycache__/
 .venv/
+.hf_cache/
 /test_indexing.py
 /test_index_pipeline.py
 /index_pipelin_result.txt
