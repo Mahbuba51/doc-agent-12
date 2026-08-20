@@ -24,7 +24,11 @@ ocr:       {model: "Qwen/Qwen2.5-VL-3B-Instruct", finetune: false, sidecar: "dat
 embed:     {model: "intfloat/multilingual-e5-small", dimension: 384, max_model_tokens: 512, device: "cpu", dtype: "float32", cache_dir: ".hf_cache", document_prefix: "passage: ", query_prefix: "query: ", normalize_embeddings: true, initial_batch_size: 8}
 index:     {type: "faiss:flat", path: "data/interim/index", merge_below_tokens: 80, target_min_tokens: 200, target_max_tokens: 300, preferred_max_tokens: 350, hard_max_tokens: 450, chunk_tokens: 450, overlap: 40}
 retrieve:  {k: 10, k_step: 10, k_max: 40, weak_threshold: 0.35, rerank: true, reranker: "cross-encoder/ms-marco-MiniLM-L6-v2"}   # k_step/k_max/weak_threshold drive evidence-gated re-search
-agent:     {max_steps: 8, autonomy: "act-with-approval", budget_usd: 0.05}
+# backend: "fake" (scripted, no weights -- CI runs here) or "local" (transformers checkpoint).
+# Ships as "fake" because no answering checkpoint is chosen yet: the Stage 3 reader ablation
+# (vision/ocr.py D2 MEASURED) closed the local-VLM escalation path, and that decision is a
+# team call, not a lane call. Set model + flip to "local" once one is picked.
+agent:     {max_steps: 8, autonomy: "act-with-approval", budget_usd: 0.05, backend: "fake", model: "", max_new_tokens: 512}
 rl:        {algo: "ppo", train_policy: false}                         # bonus: set true
 serve:     {batch: true}
 deploy:    {target: "hf-spaces"}
