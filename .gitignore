@@ -15,6 +15,7 @@ __pycache__/
 
 # Kaggle A2 notebook/generated artifacts
 /docs/kaggle_mendeley_setup.md
+/notebooks/kaggle_build_kb_index.ipynb
 /notebooks/kaggle*.ipynb
 /notebooks/kb_demo_with_retrieval_proof.ipynb
 /kb_demo_index_bundle/
