@@ -9,6 +9,7 @@ __pycache__/
 /test_indexing.py
 /test_index_pipeline.py
 /index_pipelin_result.txt
+/index_pipeline_result_latest.txt
 /chunk_results/
 /scripts/print_stats.py
 /scripts/check_single_ocr.py
@@ -31,6 +32,8 @@ __pycache__/
 /hf_cache/
 /.hf_cache/
 /src/doc_agent.egg-info/
+/data/data.zip
+/data/data_1.zip
 
 # Office temporary files
 ~$*

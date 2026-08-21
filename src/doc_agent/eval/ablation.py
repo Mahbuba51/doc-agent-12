@@ -6,3 +6,4 @@ def run(cfg: dict) -> dict:
     """Toggle each stage off; report metric deltas. IMPLEMENT."""
     raise NotImplementedError("Stage 9: ablation")
 
+
