@@ -21,3 +21,16 @@ built — it is documentation, not payload.
 | `synthetic_inj_bn#p` | Bangla injection — the realistic attack on THIS corpus |
 | `synthetic_inj_en#p` | English injection — the case the pattern layer catches |
 | `synthetic_benign#p` | a page that *discusses* instructions without attacking — false-positive control |
+
+## hallucination_cases.jsonl
+
+`(query, evidence, draft answer, expected verdict)` cases for the grounding gate, driven by
+`tests/test_hallucination.py` and captured in `reports/hallucination_demo.md`.
+
+Unlike the injection pages, these are NOT fabricated end to end: `query` and `gold` are real
+entries from `grading_kit/tasks.jsonl` (t2, t10) and `evidence` is a trimmed excerpt of the
+human transcription of `dolil_13` in `grading_kit/labels.jsonl`. Only `draft` is written by
+hand — it is the model output being tested, not ground truth.
+
+The excerpt is trimmed to the lines t2 and t10 turn on. The full page carries party names,
+and duplicating them into a second committed file is gratuitous.
