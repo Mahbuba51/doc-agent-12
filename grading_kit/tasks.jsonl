@@ -1,5 +1,14 @@
-{"id":"t1","question":"","verifiable":true,"judged":false,"gold":"","gold_pages":[],"needs_research":false}
-# One line per eval item. Student-authored, grounded in YOUR corpus.
-# needs_research: true  = a TRIGGER item whose answer is NOT on the top chunk, so the agent MUST re-search.
-#                 false = a CONTROL item answerable from the top chunk (single pass).
-# REQUIRED: at least one {needs_research:true, needs_research:false} PAIR (the A3 agentic gate reads these).
+{"id":"t1","question":"দলিল নম্বর ৯০০৩ (dolil_605) এর দলিল সম্পাদনের তারিখ কত?","verifiable":true,"judged":false,"gold":"৫/১২/১২","gold_pages":["dolil_605"],"needs_research":false}
+{"id":"t2","question":"dolil_13 এ উল্লিখিত জমির পরিমাণ কত?","verifiable":true,"judged":false,"gold":"১ ১/২","gold_pages":["dolil_13"],"needs_research":false}
+{"id":"t3","question":"দলিল নম্বর ২০০৭৮ এর dolil_100 পাতায় বেল এত্তয়াজ হেবাকৃত জমির পরিমাণ কত উল্লেখ আছে?","verifiable":true,"judged":false,"gold":"১০ শতাংশ","gold_pages":["dolil_100"],"needs_research":false}
+{"id":"t4","question":"dolil_38 এ বর্ণিত বেল এত্তয়াজ হেবা দলিলে জমির আনুমানিক মূল্য চার হাজার টাকার বিনিময়ে কী কী জিনিস বুঝিয়া পাওয়ার কথা উল্লেখ আছে?","verifiable":true,"judged":false,"gold":"একখানা জায় নামাজ ও একছড়া তছবিহ","gold_pages":["dolil_38"],"needs_research":true}
+{"id":"t5","question":"dolil_82 অনুসারে দলিলটির মুসাবিদাকারকের নাম এবং তাঁর সনদ নম্বর কত?","verifiable":true,"judged":false,"gold":"মুসাবিদাকারক মোঃ সোহরাব হোসেন এবং সনদ নং ৬২","gold_pages":["dolil_82"],"needs_research":true}
+{"id":"t6","question":"dolil_99 অনুসারে দলিল নং ২০০৭৮ কোন ভলিয়ামে কত থেকে কত পৃষ্ঠায় রেজিস্ট্রি করা হয়েছিল?","verifiable":true,"judged":false,"gold":"ভলিয়াম নং ৪১১, পৃষ্ঠা নং ৪০ – ৪৩","gold_pages":["dolil_99"],"needs_research":true}
+{"id":"t7","question":"dolil_208 এ উল্লিখিত হস্তান্তরিত সম্পত্তির জন্য ১৯৭২ সনের রাষ্ট্রপতির কত নং আদেশের ৫(ক) ধারা উল্লেখ করা হয়েছে?","verifiable":true,"judged":false,"gold":"১৯৭২ সনের রাষ্ট্রপতির ৯৮ নং আদেশ","gold_pages":["dolil_208"],"needs_research":false}
+{"id":"t8","question":"dolil_20 এ উল্লিখিত সাফ কবলা পত্রে জমি বিক্রির জন্য পরিশোধিত পণ বা উচিত মূল্য কত টাকা ছিল?","verifiable":true,"judged":false,"gold":"৯০ টাকা","gold_pages":["dolil_20"],"needs_research":false}
+{"id":"t9","question":"দলিল নম্বর ২০০৭৮ এর অন্তর্ভুক্ত dolil_71 পাতায় উল্লিখিত মোট জোত জমির পরিমাণ কত?","verifiable":true,"judged":false,"gold":"৭ একর ৮৬ শতাংশ","gold_pages":["dolil_71"],"needs_research":true}
+{"id":"t10","question":"dolil_13 দলিলে বর্ণিত জমির বাৎসরিক সরকারি খাজনার পরিমাণ কত টাকা?","verifiable":true,"judged":false,"gold":"INSUFFICIENT EVIDENCE","gold_pages":[],"needs_research":false}
+{"id":"t11","question":"dolil_99 পাতার নিবন্ধন-সংক্রান্ত তথ্য সংক্ষেপে ব্যাখ্যা করুন।","verifiable":false,"judged":true,"gold":"এটি দলিল নং ২০০৭৮-এর নিবন্ধন বিবরণ। দলিলটি বহি নং ১, ভলিয়াম নং ৪১১-এর ৪০ থেকে ৪৩ পৃষ্ঠায় নিবন্ধিত এবং নথিতে সদর সাব-রেজিস্ট্রার আবদুস সবুরের নাম রয়েছে।","gold_pages":["dolil_99"],"needs_research":false}
+{"id":"t12","question":"dolil_605 অনুসারে বেল এত্তয়াজ হেবা দলিলে দাতা ও গ্রহীতাদের ভূমিকা সংক্ষেপে ব্যাখ্যা করুন।","verifiable":false,"judged":true,"gold":"টেনু সাব্বির দলিলদাতা। মোহাম্মদ আম, লাবু মিয়া এবং মোঃ ওয়াজউদ্দিন মিয়া দলিলগ্রহীতা।","gold_pages":["dolil_605"],"needs_research":false}
+{"id":"t13","question":"dolil_71 পাতায় মোট জোত জমি এবং হেবাকৃত অংশের সম্পর্ক সংক্ষেপে ব্যাখ্যা করুন।","verifiable":false,"judged":true,"gold":"পাতাটিতে মোট জোত জমি ৭ একর ৮৬ শতাংশ বলা হয়েছে; এর মধ্য থেকে বেল এত্তয়াজ হেবাকৃত অংশ ১০ শতাংশ।","gold_pages":["dolil_71"],"needs_research":false}
+{"id":"t14","question":"dolil_605 পাতায় উল্লিখিত দলিলদাতা ও দলিলগ্রহীতাদের জন্মতারিখ কী?","verifiable":true,"judged":false,"gold":"INSUFFICIENT EVIDENCE","gold_pages":[],"needs_research":false}
