@@ -24,6 +24,11 @@ def get_logger(name: str) -> logging.Logger:
     return lg
 
 
+# Defined after get_logger, not before: this module supplies the logger every other module
+# uses, so it cannot borrow one from anywhere else.
+logger = get_logger(__name__)
+
+
 def register(hooks: Any) -> None:
     """Wire structured tracing at each seam (auditable trail) AND emit traces/run.jsonl.
 
@@ -34,7 +39,7 @@ def register(hooks: Any) -> None:
     The step counter lives in this closure, so it restarts whenever wiring.register_all()
     re-registers -- one numbering per wired run, which is what makes the trajectory readable.
     """
-    from .contracts import TraceStep
+    from .contracts import ToolResult, TraceStep
 
     counter = {"step": 0}
 
@@ -45,6 +50,34 @@ def register(hooks: Any) -> None:
     TRACE_PATH.parent.mkdir(parents=True, exist_ok=True)
     TRACE_PATH.write_text("", encoding="utf-8")
 
+    def _compact(payload: dict) -> dict:
+        """Payload with bulk collections collapsed to a count.
+
+        traces/ is COMMITTED -- traces/example_trace.md is tracked, because the worked trace
+        is an A3 deliverable. A payload's "chunks" key holds whole Chunk objects, so copying
+        it verbatim would write party names and addresses from the deeds into git history.
+        The scalars the audit actually needs (top_score, k, ok) and the compact "chunk_ids"
+        reference survive; the bodies they point at do not.
+
+        This is deliberately structural rather than a PII pattern match: it cannot be
+        defeated by a name the redactor does not recognise, because it never copies the
+        field at all. Residual risk stays in scalar strings such as a reformulated query --
+        see governance/pii.py for the policy that has to cover those.
+        """
+        out: dict = {}
+        for key, value in payload.items():
+            if isinstance(value, (str, int, float, bool, type(None))):
+                out[key] = value
+            elif isinstance(value, (list, tuple)) and all(
+                isinstance(v, (str, int, float, bool)) for v in value
+            ):
+                out[key] = list(value)
+            else:
+                out[key] = (
+                    f"<{len(value)} item(s) omitted>" if hasattr(value, "__len__") else "<omitted>"
+                )
+        return out
+
     def _emit(tool: str, args: dict, obs: dict) -> None:
         counter["step"] += 1
         record = TraceStep(step=counter["step"], tool=tool, args=args, obs=obs)
@@ -52,12 +85,29 @@ def register(hooks: Any) -> None:
         with TRACE_PATH.open("a", encoding="utf-8") as fh:
             fh.write(record.model_dump_json() + "\n")
 
+    def _as_obs(observation: object) -> dict:
+        """Whatever the loop appended to state['obs'], as a dict TraceStep will accept.
+
+        Agent.run appends ToolResult, not dicts, so the payload has to be unwrapped -- and
+        `ok` carried across with it, because a trace that shows a failed tool call as an
+        ordinary one is an audit trail that hides the thing worth auditing. Payload keys win
+        a collision: they are the tool's own report.
+        """
+        if isinstance(observation, ToolResult):
+            return {"ok": observation.ok, **_compact(observation.payload)}
+        if isinstance(observation, dict):
+            return _compact(observation)
+        # Never raise. Tracing that takes down the run it is auditing loses the whole
+        # trajectory to protect one field; record the surprise and let the run finish.
+        logger.warning("unexpected observation type %s in trace", type(observation).__name__)
+        return {"raw": repr(observation)}
+
     def _on_step(ctx: dict) -> dict:
         state = ctx.get("state") or {}
         seen = state.get("obs") or []
         # The LAST observation is what decide() branches on, and top_score/k in it are what
         # the A3 agentic check reads to confirm the path depended on the evidence.
-        _emit("decide", {"query": state.get("query", "")}, seen[-1] if seen else {})
+        _emit("decide", {"query": state.get("query", "")}, _as_obs(seen[-1]) if seen else {})
         return ctx
 
     def _on_tool_call(ctx: dict) -> dict:

@@ -9,7 +9,7 @@ import json
 import pytest
 
 from doc_agent import hooks, logging_conf
-from doc_agent.contracts import Answer, TraceStep
+from doc_agent.contracts import Answer, Chunk, ToolResult, TraceStep
 
 
 @pytest.fixture
@@ -86,3 +86,52 @@ def test_a_widening_re_search_is_readable_from_the_trace(trace):
     decide, retrieve = _lines(trace)
     assert decide.obs["top_score"] < 0.35 and decide.obs["k"] == 10
     assert retrieve.args["k"] == 20
+
+
+def test_a_tool_result_observation_is_serialized_not_passed_raw(trace):
+    """Agent.run appends ToolResult to state['obs']; TraceStep.obs needs a dict."""
+    result = ToolResult(ok=True, payload={"top_score": 0.31, "k": 10})
+
+    hooks.run(hooks.ON_STEP, {"state": {"query": "q", "obs": [result]}})
+
+    (step,) = _lines(trace)
+    assert step.obs["top_score"] == 0.31
+    assert step.obs["k"] == 10
+
+
+def test_a_failed_tool_call_is_visible_in_the_trace(trace):
+    """ok=False must survive into the audit trail, or a failed step reads as a clean one."""
+    result = ToolResult(ok=False, payload={"error": "unknown tool: rm_rf"})
+
+    hooks.run(hooks.ON_STEP, {"state": {"query": "q", "obs": [result]}})
+
+    (step,) = _lines(trace)
+    assert step.obs["ok"] is False
+    assert step.obs["error"] == "unknown tool: rm_rf"
+
+
+def test_an_unexpected_observation_type_does_not_take_down_the_run(trace):
+    """Tracing must not crash the run it is auditing."""
+    hooks.run(hooks.ON_STEP, {"state": {"query": "q", "obs": ["a bare string"]}})
+
+    (step,) = _lines(trace)
+    assert "a bare string" in str(step.obs)
+
+
+def test_the_trace_records_chunk_ids_not_the_deed_text(trace):
+    """traces/ is committed (traces/example_trace.md is tracked), so it must not carry
+    verbatim corpus text -- party names and addresses would enter git history."""
+    chunk = Chunk(id="dolil_38#p", doc_id="d1", text="মালিক রহিম উদ্দিন", page_ids=["dolil_38"])
+    result = ToolResult(
+        ok=True,
+        payload={"chunks": [chunk], "chunk_ids": ["dolil_38#p"], "top_score": 0.31, "k": 10},
+    )
+
+    hooks.run(hooks.ON_STEP, {"state": {"query": "q", "obs": [result]}})
+
+    line = trace.read_text()
+    assert "রহিম উদ্দিন" not in line
+    (step,) = _lines(trace)
+    assert step.obs["chunk_ids"] == ["dolil_38#p"]
+    assert step.obs["top_score"] == 0.31
+    assert step.obs["k"] == 10

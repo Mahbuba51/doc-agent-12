@@ -48,3 +48,10 @@ def test_unknown_backend_names_itself_in_the_error():
     llm = LLM(_cfg(backend="wishful"))
     with pytest.raises(ValueError, match="wishful"):
         llm.complete("a")
+
+
+def test_the_local_backend_says_what_is_missing_when_no_checkpoint_is_set():
+    """A bare KeyError('model') tells the next person nothing about what to fix."""
+    llm = LLM(_cfg(backend="local", model=""))
+    with pytest.raises(ValueError, match="agent.model"):
+        llm.complete("who owns plot 2163?")

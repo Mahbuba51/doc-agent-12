@@ -24,7 +24,14 @@ ocr:       {model: "Qwen/Qwen2.5-VL-3B-Instruct", finetune: false, sidecar: "dat
 embed:     {model: "intfloat/multilingual-e5-small", dimension: 384, max_model_tokens: 512, device: "cpu", dtype: "float32", cache_dir: ".hf_cache", document_prefix: "passage: ", query_prefix: "query: ", normalize_embeddings: true, initial_batch_size: 8}
 index:     {type: "faiss:flat", path: "data/interim/index", merge_below_tokens: 80, target_min_tokens: 200, target_max_tokens: 300, preferred_max_tokens: 350, hard_max_tokens: 450, chunk_tokens: 450, overlap: 40, sparse_schema_version: 1}
 retrieve:  {k: 10, k_step: 10, k_max: 40, weak_threshold: 0.35, candidate_multiplier: 4, dense_weight: 0.65, bm25_weight: 0.35, rrf_k: 60, bm25_enabled: true, bm25_token_field: "bm25_tokens", bm25_cache: true, bm25_cache_name: "bm25", bm25_k1: 1.5, bm25_b: 0.75, bm25_epsilon: 0.25, rerank: true, reranker: "BAAI/bge-reranker-v2-m3", rerank_top_n: 30, rerank_max_length: 512, reranker_trust_remote_code: false}   # k_step/k_max/weak_threshold drive evidence-gated re-search
-agent:     {max_steps: 8, autonomy: "act-with-approval", budget_usd: 0.05}
+# backend: "fake" (scripted, no weights -- CI runs here) or "local" (transformers checkpoint).
+# Ships as "fake" because NO ANSWERING CHECKPOINT HAS BEEN AGREED YET: the Stage 3 reader
+# ablation (vision/ocr.py D2 MEASURED) closed the local-VLM escalation path, and picking the
+# replacement is a team decision. Until agent.model is set, synthesize() returns the fake
+# completion, which fails the grounding gate and abstains -- the pipeline runs end to end,
+# but every answer abstains. Set model + flip to "local" once a checkpoint is chosen.
+# (These keys were added in abf6ca1 and lost in the 6873983 merge; restored.)
+agent:     {max_steps: 8, autonomy: "act-with-approval", budget_usd: 0.05, backend: "fake", model: "", max_new_tokens: 512}
 rl:        {algo: "ppo", train_policy: false}                         # bonus: set true
 serve:     {batch: true}
 deploy:    {target: "hf-spaces"}

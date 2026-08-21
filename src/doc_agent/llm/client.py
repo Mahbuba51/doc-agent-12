@@ -80,9 +80,18 @@ class LLM:
 
     def _load(self) -> Callable[..., str]:
         """Build the generate callable on first use, so importing this module stays CPU-safe."""
+        name = self.cfg.get("model") or ""
+        if not name:
+            # Checked before the import so the failure names the decision, not a missing
+            # weight file. No answering checkpoint has been agreed for this project yet.
+            raise ValueError(
+                "backend is 'local' but cfg['agent']['model'] is empty -- set agent.model in "
+                "configs/config.yaml to a checkpoint, or set agent.backend: 'fake' to run "
+                "without weights"
+            )
+
         from transformers import AutoModelForCausalLM, AutoTokenizer  # heavy, load late
 
-        name = self.cfg["model"]
         logger.info("loading llm %s", name)
         self._tokenizer = AutoTokenizer.from_pretrained(name)
         self._model = AutoModelForCausalLM.from_pretrained(name, device_map="auto")
